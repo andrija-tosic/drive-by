@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "644801626559",
+    "firebase_url": "https://drive-by-4545a-default-rtdb.europe-west1.firebasedatabase.app",
+    "project_id": "drive-by-4545a",
+    "storage_bucket": "drive-by-4545a.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:644801626559:android:01034b05dbe421ee0f210a",
+        "android_client_info": {
+          "package_name": "com.example.driveby"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "644801626559-9l77u0rm9qm4891mk0rleubc3j0ckims.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBHcm2mlrs3bm0fepArIgQWwI1sc4zlAfE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "644801626559-9l77u0rm9qm4891mk0rleubc3j0ckims.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
