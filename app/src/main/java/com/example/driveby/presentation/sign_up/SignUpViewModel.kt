@@ -49,13 +49,14 @@ class SignUpViewModel @Inject constructor(
     ) = viewModelScope.launch {
         try {
             signUpResponse = Response.Loading
-            signUpResponse = authRepo.firebaseSignUpWithEmailAndPasswordAsync(email, password)
-            when (val response = signUpResponse) {
+            val response = authRepo.firebaseSignUpWithEmailAndPasswordAsync(email, password)
+            when (response) {
                 is Response.Failure -> Unit
                 is Response.Loading -> Unit
                 is Response.Success -> {
                     Log.i(LOG_TAG, "uploading photo to firebase storage")
-                    val imageUrl = uploadPhotoToFirebaseStorageAsync(Uri.parse(localImageUri)).await()
+                    val imageUrl =
+                        uploadPhotoToFirebaseStorageAsync(Uri.parse(localImageUri)).await()
 
                     Log.i(LOG_TAG, "creating user")
                     val user = User(
@@ -72,7 +73,9 @@ class SignUpViewModel @Inject constructor(
                     Log.i(LOG_TAG, "repo creating $user")
 
                     userRepo.createUser(user)
+                    signUpResponse = response
                 }
+
                 is Response.None -> Unit
             }
         } catch (e: Exception) {

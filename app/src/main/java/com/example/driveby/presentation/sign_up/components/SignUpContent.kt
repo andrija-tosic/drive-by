@@ -2,7 +2,12 @@ package com.example.driveby.presentation.sign_up.components
 
 import CameraCapture
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
@@ -21,8 +26,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.sp
 import com.example.driveby.components.EmailField
 import com.example.driveby.components.PasswordField
-import com.example.driveby.components.TextField
 import com.example.driveby.components.SmallSpacer
+import com.example.driveby.components.TextField
 import com.example.driveby.core.Constants.ALREADY_USER
 import com.example.driveby.core.Constants.SIGN_UP_BUTTON
 import com.example.driveby.core.Utils.Companion.showToast
@@ -150,15 +155,17 @@ fun SignUpContent(
         SmallSpacer()
         Text(text = "User type")
         SmallSpacer()
-        Row() {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             RadioButton(
                 selected = userType == UserType.Regular,
-                onClick = { userType = UserType.Regular })
+                onClick = { userType = UserType.Regular }
+            )
             Text(text = "Regular")
             SmallSpacer()
             RadioButton(
                 selected = userType == UserType.Driver,
-                onClick = { userType = UserType.Driver })
+                onClick = { userType = UserType.Driver }
+            )
             Text(text = "Driver")
         }
         SmallSpacer()

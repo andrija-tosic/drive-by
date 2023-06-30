@@ -7,12 +7,19 @@ import android.provider.MediaStore
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 
 @Composable
@@ -46,7 +53,8 @@ fun CameraCapture(onPhotoCaptured: (Uri) -> Unit) {
         if (photoUri.value != null) {
             Text("Photo captured!")
         }
-        Button(onClick = {
+        OutlinedButton(
+            onClick = {
             val permission = Manifest.permission.CAMERA
             if (ContextCompat.checkSelfPermission(
                     context,
@@ -62,7 +70,12 @@ fun CameraCapture(onPhotoCaptured: (Uri) -> Unit) {
                 requestPermissionLauncher.launch(permission)
             }
         }) {
-            Text("Launch Camera")
+            Icon(
+                imageVector = Icons.Outlined.PhotoCamera,
+                contentDescription = null
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("Take photo")
         }
     }
 }

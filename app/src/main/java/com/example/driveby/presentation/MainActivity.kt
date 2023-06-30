@@ -25,12 +25,12 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            DriveByTheme() {
+            DriveByTheme {
                 navController = rememberAnimatedNavController()
                 NavGraph(
                     navController = navController
                 )
-                AuthState()
+//                AuthState()
             }
         }
     }
@@ -41,11 +41,11 @@ class MainActivity : ComponentActivity() {
         if (isUserSignedOut) {
             NavigateToSignInScreen()
         } else {
-            if (viewModel.isEmailVerified) {
-                NavigateToProfileScreen()
-            } else {
-                NavigateToVerifyEmailScreen()
-            }
+//            if (viewModel.isEmailVerified) {
+            NavigateToProfileScreen()
+//            } else {
+//                NavigateToVerifyEmailScreen()
+//            }
         }
     }
 

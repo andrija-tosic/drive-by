@@ -31,7 +31,6 @@ fun SignInScreen(
                 signIn = { email, password ->
                     viewModel.signInWithEmailAndPassword(email, password)
                 },
-                navigateToForgotPasswordScreen = navigateToForgotPasswordScreen,
                 navigateToSignUpScreen = navigateToSignUpScreen
             )
         }

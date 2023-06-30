@@ -1,4 +1,4 @@
-package ro.alexmamo.firebasesigninwithemailandpassword.presentation.sign_up.components
+package com.example.driveby.presentation.sign_up.components
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -18,12 +18,12 @@ fun SignUp(
         is Response.Loading -> ProgressBar()
         is Response.Success -> {
             val isUserSignedUp = signUpResponse.data?.user != null
-            LaunchedEffect(isUserSignedUp) {
+//            LaunchedEffect(isUserSignedUp) {
                 if (isUserSignedUp) {
                     sendEmailVerification()
                     showVerifyEmailMessage()
                 }
-            }
+//            }
         }
         is Response.Failure -> signUpResponse.apply {
             LaunchedEffect(e) {

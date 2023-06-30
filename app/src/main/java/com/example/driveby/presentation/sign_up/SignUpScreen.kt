@@ -9,9 +9,9 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.driveby.core.Constants.VERIFY_EMAIL_MESSAGE
 import com.example.driveby.core.Utils.Companion.showToast
 import com.example.driveby.presentation.sign_up.components.SendEmailVerification
+import com.example.driveby.presentation.sign_up.components.SignUp
 import com.example.driveby.presentation.sign_up.components.SignUpContent
 import com.example.driveby.presentation.sign_up.components.SignUpTopBar
-import ro.alexmamo.firebasesigninwithemailandpassword.presentation.sign_up.components.SignUp
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
