@@ -17,9 +17,9 @@ import javax.inject.Inject
 class ProfileViewModel @Inject constructor(
     private val repo: AuthRepository
 ): ViewModel() {
-    var revokeAccessResponse by mutableStateOf<RevokeAccessResponse>(Response.Success(false))
+    var revokeAccessResponse by mutableStateOf<RevokeAccessResponse>(Response.None)
         private set
-    var reloadUserResponse by mutableStateOf<ReloadUserResponse>(Response.Success(false))
+    var reloadUserResponse by mutableStateOf<ReloadUserResponse>(Response.None)
         private set
 
     fun reloadUser() = viewModelScope.launch {

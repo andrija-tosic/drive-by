@@ -14,7 +14,8 @@ import com.example.driveby.core.Constants.PROFILE_SCREEN
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
-    viewModel: ProfileViewModel = hiltViewModel()
+    viewModel: ProfileViewModel = hiltViewModel(),
+    navigateToSignInScreen: () -> Unit
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
@@ -25,6 +26,7 @@ fun ProfileScreen(
                 title = PROFILE_SCREEN,
                 signOut = {
                     viewModel.signOut()
+                    navigateToSignInScreen()
                 },
                 revokeAccess = {
                     viewModel.revokeAccess()
@@ -44,6 +46,7 @@ fun ProfileScreen(
         coroutineScope = coroutineScope,
         signOut = {
             viewModel.signOut()
+            navigateToSignInScreen()
         }
     )
 }

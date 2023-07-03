@@ -77,7 +77,7 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getAuthState(viewModelScope: CoroutineScope) = callbackFlow {
+    override fun isAuthenticated(viewModelScope: CoroutineScope) = callbackFlow {
         val authStateListener = FirebaseAuth.AuthStateListener { auth ->
             trySend(auth.currentUser == null)
         }
@@ -85,5 +85,5 @@ class AuthRepositoryImpl @Inject constructor(
         awaitClose {
             auth.removeAuthStateListener(authStateListener)
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), auth.currentUser == null)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), auth.currentUser != null)
 }

@@ -11,19 +11,22 @@ import com.example.driveby.presentation.sign_up.SignUpViewModel
 fun SignUp(
     viewModel: SignUpViewModel = hiltViewModel(),
     sendEmailVerification: () -> Unit,
-    showVerifyEmailMessage: () -> Unit
+    showVerifyEmailMessage: () -> Unit,
+    navigateToHomeScreen: () -> Unit
 ) {
     when(val signUpResponse = viewModel.signUpResponse) {
         is Response.None -> {}
         is Response.Loading -> ProgressBar()
         is Response.Success -> {
             val isUserSignedUp = signUpResponse.data?.user != null
-//            LaunchedEffect(isUserSignedUp) {
+            LaunchedEffect(isUserSignedUp) {
                 if (isUserSignedUp) {
                     sendEmailVerification()
                     showVerifyEmailMessage()
+
+                    navigateToHomeScreen()
                 }
-//            }
+            }
         }
         is Response.Failure -> signUpResponse.apply {
             LaunchedEffect(e) {

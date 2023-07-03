@@ -26,7 +26,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SignUpViewModel @Inject constructor(
     private val userRepo: UserRepository,
-    val authRepo: AuthRepository,
+    private val authRepo: AuthRepository,
 ) : ViewModel() {
     var signUpResponse by mutableStateOf<SignUpResponse>(Response.None)
         private set
@@ -49,8 +49,8 @@ class SignUpViewModel @Inject constructor(
     ) = viewModelScope.launch {
         try {
             signUpResponse = Response.Loading
-            val response = authRepo.firebaseSignUpWithEmailAndPasswordAsync(email, password)
-            when (response) {
+            when (val response =
+                authRepo.firebaseSignUpWithEmailAndPasswordAsync(email, password)) {
                 is Response.Failure -> Unit
                 is Response.Loading -> Unit
                 is Response.Success -> {
@@ -66,7 +66,9 @@ class SignUpViewModel @Inject constructor(
                         lastName,
                         phone,
                         imageUrl,
-                        userType
+                        userType,
+                        0.0,
+                        0.0
                     )
                     Log.i(LOG_TAG, "created user $user")
 

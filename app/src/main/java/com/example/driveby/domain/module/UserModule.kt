@@ -10,7 +10,6 @@ import dagger.hilt.android.components.ViewModelComponent
 @Module
 @InstallIn(ViewModelComponent::class)
 object UserModule {
-
     @Provides
     fun provideUserRepository(): UserRepository {
         return UserRepositoryImpl()

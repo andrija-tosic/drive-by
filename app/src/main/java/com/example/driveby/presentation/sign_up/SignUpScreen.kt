@@ -18,7 +18,8 @@ import com.example.driveby.presentation.sign_up.components.SignUpTopBar
 @ExperimentalComposeUiApi
 fun SignUpScreen(
     viewModel: SignUpViewModel = hiltViewModel(),
-    navigateBack: () -> Unit
+    navigateBack: () -> Unit,
+    navigateToHomeScreen: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -53,6 +54,9 @@ fun SignUpScreen(
         },
         showVerifyEmailMessage = {
             showToast(context, VERIFY_EMAIL_MESSAGE)
+        },
+        navigateToHomeScreen = {
+                navigateToHomeScreen()
         }
     )
 

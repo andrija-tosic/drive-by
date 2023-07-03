@@ -10,12 +10,16 @@ import com.example.driveby.presentation.sign_in.SignInViewModel
 @Composable
 fun SignIn(
     viewModel: SignInViewModel = hiltViewModel(),
-    showErrorMessage: (errorMessage: String?) -> Unit
+    showErrorMessage: (errorMessage: String?) -> Unit,
+    navigateToHomeScreen: () -> Unit
 ) {
-    when(val signInResponse = viewModel.signInResponse) {
+    when (val signInResponse = viewModel.signInResponse) {
         is Response.None -> {}
         is Response.Loading -> ProgressBar()
-        is Response.Success<*> -> Unit
+        is Response.Success<*> -> {
+            navigateToHomeScreen()
+        }
+
         is Response.Failure -> signInResponse.apply {
             LaunchedEffect(e) {
                 print(e)

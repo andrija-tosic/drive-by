@@ -6,6 +6,7 @@ import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.navigation.NavHostController
+import com.example.driveby.presentation.home.HomeScreen
 import com.example.driveby.presentation.sign_in.SignInScreen
 import com.example.driveby.presentation.sign_in.profile.ProfileScreen
 import com.example.driveby.presentation.sign_up.SignUpScreen
@@ -34,6 +35,9 @@ fun NavGraph(
                 },
                 navigateToSignUpScreen = {
                     navController.navigate(Screen.SignUpScreen.route)
+                },
+                navigateToHomeScreen = {
+                    navController.navigate(Screen.HomeScreen.route)
                 }
             )
         }
@@ -43,6 +47,9 @@ fun NavGraph(
             SignUpScreen(
                 navigateBack = {
                     navController.popBackStack()
+                },
+                navigateToHomeScreen = {
+                    navController.navigate(Screen.HomeScreen.route)
                 }
             )
         }
@@ -51,18 +58,23 @@ fun NavGraph(
         ) {
             VerifyEmailScreen(
                 navigateToProfileScreen = {
-                    navController.navigate(Screen.ProfileScreen.route) {
-                        popUpTo(navController.graph.id) {
-                            inclusive = true
-                        }
-                    }
+                    navController.navigate(Screen.ProfileScreen.route)
                 }
             )
         }
         composable(
             route = Screen.ProfileScreen.route
         ) {
-            ProfileScreen()
+            ProfileScreen(
+                navigateToSignInScreen = {
+                    navController.navigate(Screen.SignInScreen.route)
+                }
+            )
+        }
+        composable(
+            route = Screen.HomeScreen.route
+        ) {
+            HomeScreen()
         }
     }
 }

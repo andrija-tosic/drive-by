@@ -18,6 +18,7 @@ fun SignInScreen(
     viewModel: SignInViewModel = hiltViewModel(),
     navigateToForgotPasswordScreen: () -> Unit,
     navigateToSignUpScreen: () -> Unit,
+    navigateToHomeScreen: () -> Unit
 ) {
     val context = LocalContext.current
 
@@ -39,6 +40,9 @@ fun SignInScreen(
     SignIn(
         showErrorMessage = { errorMessage ->
             showToast(context, errorMessage)
+        },
+        navigateToHomeScreen = {
+            navigateToHomeScreen()
         }
     )
 }

@@ -14,7 +14,7 @@ class MainViewModel @Inject constructor(
         getAuthState()
     }
 
-    fun getAuthState() = repo.getAuthState(viewModelScope)
+    fun getAuthState() = repo.isAuthenticated(viewModelScope)
 
     val isEmailVerified get() = repo.currentUser?.isEmailVerified ?: false
 }
