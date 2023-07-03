@@ -1,4 +1,4 @@
-package com.example.driveby.presentation
+package com.example.driveby.components
 
 import android.Manifest
 import android.annotation.SuppressLint
