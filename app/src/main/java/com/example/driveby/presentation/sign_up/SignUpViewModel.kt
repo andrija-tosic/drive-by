@@ -7,7 +7,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.driveby.core.Constants.LOG_TAG
+import com.example.driveby.core.Strings.LOG_TAG
+import com.example.driveby.domain.model.Car
+import com.example.driveby.domain.model.Driver
 import com.example.driveby.domain.model.Response
 import com.example.driveby.domain.model.User
 import com.example.driveby.domain.model.UserType
@@ -46,6 +48,7 @@ class SignUpViewModel @Inject constructor(
         phone: String,
         userType: UserType,
         localImageUri: String,
+        car: Car = Car()
     ) = viewModelScope.launch {
         try {
             signUpResponse = Response.Loading
@@ -58,21 +61,33 @@ class SignUpViewModel @Inject constructor(
                     val imageUrl =
                         uploadPhotoToFirebaseStorageAsync(Uri.parse(localImageUri)).await()
 
-                    Log.i(LOG_TAG, "creating user")
-                    val user = User(
-                        response.data!!.user!!.uid,
-                        email,
-                        firstName,
-                        lastName,
-                        phone,
-                        imageUrl,
-                        userType,
-                        0.0,
-                        0.0
-                    )
-                    Log.i(LOG_TAG, "created user $user")
-
-                    Log.i(LOG_TAG, "repo creating $user")
+                    val user = when (userType) {
+                        UserType.Passenger -> User(
+                            response.data!!.user!!.uid,
+                            email,
+                            firstName,
+                            lastName,
+                            phone,
+                            imageUrl,
+                            userType,
+                            0.0,
+                            0.0,
+                            0
+                        )
+                        UserType.Driver -> Driver(
+                            response.data!!.user!!.uid,
+                            email,
+                            firstName,
+                            lastName,
+                            phone,
+                            imageUrl,
+                            userType,
+                            0.0,
+                            0.0,
+                            0,
+                            car
+                        )
+                    }
 
                     userRepo.createUser(user)
                     signUpResponse = response

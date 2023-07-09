@@ -6,8 +6,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.example.driveby.core.Constants.VERIFY_EMAIL_MESSAGE
+import com.example.driveby.core.Strings.VERIFY_EMAIL_MESSAGE
 import com.example.driveby.core.Utils.Companion.showToast
+import com.example.driveby.domain.model.Car
 import com.example.driveby.presentation.sign_up.components.SendEmailVerification
 import com.example.driveby.presentation.sign_up.components.SignUp
 import com.example.driveby.presentation.sign_up.components.SignUpContent
@@ -32,7 +33,7 @@ fun SignUpScreen(
         content = { padding ->
             SignUpContent(
                 padding = padding,
-                signUp = { email, password, phone, firstName, lastName, userType, localImageUri ->
+                signUpPassenger = { email, password, phone, firstName, lastName, userType, localImageUri ->
                     viewModel.registerAndCreateUser(
                         email,
                         password,
@@ -41,6 +42,18 @@ fun SignUpScreen(
                         phone,
                         userType,
                         localImageUri
+                    )
+                },
+                signUpDriver = { email, password, phone, firstName, lastName, userType, localImageUri, model, brand, seats ->
+                    viewModel.registerAndCreateUser(
+                        email,
+                        password,
+                        firstName,
+                        lastName,
+                        phone,
+                        userType,
+                        localImageUri,
+                        Car( brand, model, seats)
                     )
                 },
                 navigateBack = navigateBack
@@ -56,7 +69,7 @@ fun SignUpScreen(
             showToast(context, VERIFY_EMAIL_MESSAGE)
         },
         navigateToHomeScreen = {
-                navigateToHomeScreen()
+            navigateToHomeScreen()
         }
     )
 

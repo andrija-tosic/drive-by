@@ -10,9 +10,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.driveby.components.TopBar
-import com.example.driveby.core.Constants.EMAIL_NOT_VERIFIED_MESSAGE
-import com.example.driveby.core.Constants.VERIFY_EMAIL_SCREEN
+import com.example.driveby.core.Strings.EMAIL_NOT_VERIFIED_MESSAGE
 import com.example.driveby.core.Utils.Companion.showToast
+import com.example.driveby.navigation.Screen
 import com.example.driveby.presentation.sign_in.profile.ProfileViewModel
 import com.example.driveby.presentation.sign_in.profile.RevokeAccess
 
@@ -29,7 +29,7 @@ fun VerifyEmailScreen(
     Scaffold(
         topBar = {
             TopBar(
-                title = VERIFY_EMAIL_SCREEN,
+                title = Screen.VerifyEmailScreen.route,
                 signOut = {
                     viewModel.signOut()
                 },

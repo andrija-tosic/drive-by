@@ -1,14 +1,21 @@
 package com.example.driveby.presentation.sign_up.components
 
 import CameraCapture
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -19,17 +26,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.driveby.components.EmailField
 import com.example.driveby.components.PasswordField
 import com.example.driveby.components.SmallSpacer
 import com.example.driveby.components.TextField
-import com.example.driveby.core.Constants.ALREADY_USER
-import com.example.driveby.core.Constants.SIGN_UP_BUTTON
+import com.example.driveby.core.Strings.ALREADY_USER
+import com.example.driveby.core.Strings.SIGN_UP_BUTTON
 import com.example.driveby.core.Utils.Companion.showToast
 import com.example.driveby.domain.model.UserType
 
@@ -37,7 +46,7 @@ import com.example.driveby.domain.model.UserType
 @ExperimentalComposeUiApi
 fun SignUpContent(
     padding: PaddingValues,
-    signUp: (
+    signUpPassenger: (
         email: String,
         password: String,
         phone: String,
@@ -45,6 +54,18 @@ fun SignUpContent(
         lastName: String,
         userType: UserType,
         photoUri: String
+    ) -> Unit,
+    signUpDriver: (
+        email: String,
+        password: String,
+        phone: String,
+        firstName: String,
+        lastName: String,
+        userType: UserType,
+        photoUri: String,
+        carModel: String,
+        carBrand: String,
+        carSeats: Int
     ) -> Unit,
     navigateBack: () -> Unit
 ) {
@@ -108,7 +129,7 @@ fun SignUpContent(
     var userType by rememberSaveable(
         init = {
             mutableStateOf(
-                value = UserType.Regular
+                value = UserType.Passenger
             )
         }
     )
@@ -118,9 +139,10 @@ fun SignUpContent(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(padding),
+            .padding(padding)
+            .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.Center,
-        horizontalAlignment = Alignment.CenterHorizontally
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         EmailField(
             email = email,
@@ -157,20 +179,96 @@ fun SignUpContent(
         SmallSpacer()
         Row(verticalAlignment = Alignment.CenterVertically) {
             RadioButton(
-                selected = userType == UserType.Regular,
-                onClick = { userType = UserType.Regular }
+                selected = userType == UserType.Passenger,
+                onClick = { userType = UserType.Passenger }
             )
-            Text(text = "Regular")
+            Text(text = UserType.Passenger.name)
             SmallSpacer()
             RadioButton(
                 selected = userType == UserType.Driver,
                 onClick = { userType = UserType.Driver }
             )
-            Text(text = "Driver")
+            Text(text = UserType.Driver.name)
         }
         SmallSpacer()
         CameraCapture { uri -> imageUri = uri.toString() }
         SmallSpacer()
+
+
+        var brand by rememberSaveable(
+            stateSaver = TextFieldValue.Saver,
+            init = {
+                mutableStateOf(
+                    value = TextFieldValue(
+                        text = "BMW"
+                    )
+                )
+            }
+        )
+        var model by rememberSaveable(
+            stateSaver = TextFieldValue.Saver,
+            init = {
+                mutableStateOf(
+                    value = TextFieldValue(
+                        text = "520i"
+                    )
+                )
+            }
+        )
+
+        var seats by rememberSaveable(
+            stateSaver = TextFieldValue.Saver,
+            init = {
+                mutableStateOf(
+                    value = TextFieldValue(
+                        text = "5"
+                    )
+                )
+            }
+        )
+        if (userType == UserType.Driver) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+                    .background(MaterialTheme.colorScheme.background)
+                    .border(0.dp, Color.White, RoundedCornerShape(8.dp)),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                SmallSpacer()
+                Text(
+                    text = "Your car",
+                    fontSize = 16.sp
+                )
+                SmallSpacer()
+                TextField(
+                    text = brand,
+                    keyboardType = KeyboardType.Text,
+                    onTextValueChange = { newValue -> brand = newValue },
+                    label = "Brand"
+                )
+                SmallSpacer()
+                TextField(
+                    text = model,
+                    keyboardType = KeyboardType.Text,
+                    onTextValueChange = { newValue -> model = newValue },
+                    label = "Model"
+                )
+                SmallSpacer()
+                TextField(
+                    text = seats,
+                    keyboardType = KeyboardType.Number,
+                    onTextValueChange = { newValue ->
+                        if (newValue.text.toInt() in 1..7) {
+                            seats = newValue
+                        }
+                    },
+                    label = "Number of seats"
+                )
+            }
+        }
+
         Button(
             onClick = {
                 if (imageUri.isNullOrBlank()) {
@@ -179,15 +277,33 @@ fun SignUpContent(
                 }
 
                 keyboard?.hide()
-                signUp(
-                    email.text,
-                    password.text,
-                    phone.text,
-                    firstName.text,
-                    lastName.text,
-                    userType,
-                    imageUri!!
-                )
+
+                when (userType) {
+                    UserType.Passenger -> signUpPassenger(
+                        email.text,
+                        password.text,
+                        phone.text,
+                        firstName.text,
+                        lastName.text,
+                        userType,
+                        imageUri!!
+                    )
+
+                    UserType.Driver -> signUpDriver(
+                        email.text,
+                        password.text,
+                        phone.text,
+                        firstName.text,
+                        lastName.text,
+                        userType,
+                        imageUri!!,
+                        model.text,
+                        brand.text,
+                        seats.text.toInt()
+                    )
+                }
+
+
             }
         ) {
             Text(

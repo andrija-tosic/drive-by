@@ -1,6 +1,6 @@
 package com.example.driveby.domain.model
 
 enum class UserType {
-    Regular,
+    Passenger,
     Driver
 }

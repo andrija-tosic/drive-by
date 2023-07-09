@@ -14,19 +14,19 @@ sealed class BottomBarScreen(
 ) {
     object Leaderboard : BottomBarScreen(
         route = Screen.LeaderboardScreen.route,
-        title = "LEADERBOARD",
+        title = Screen.LeaderboardScreen.route,
         icon = Icons.Outlined.Leaderboard
     )
 
     object Home : BottomBarScreen(
         route = Screen.HomeScreen.route,
-        title = "HOME",
+        title = Screen.HomeScreen.route,
         icon = Icons.Outlined.Home
     )
 
     object Profile : BottomBarScreen(
         route = Screen.ProfileScreen.route,
-        title = "PROFILE",
+        title = Screen.ProfileScreen.route,
         icon = Icons.Outlined.Person
     )
 }

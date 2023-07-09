@@ -1,8 +1,8 @@
 package com.example.driveby.domain.repository
 
 import android.util.Log
-import com.example.driveby.core.Constants.LOG_TAG
-import com.example.driveby.domain.model.User
+import com.example.driveby.core.Strings.LOG_TAG
+import com.example.driveby.domain.model.IUser
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.FirebaseDatabase
@@ -19,11 +19,15 @@ class UserRepositoryImpl @Inject constructor() :
     override val users = FirebaseDatabase.getInstance().reference.child("users")
 
     init {
+        Log.i(LOG_TAG, "UserRepositoryImpl")
+
         val driversListener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
-                val user: HashMap<String, User> = snapshot.value as HashMap<String, User>
+                // snapshot value may be null
 
-                Log.i(LOG_TAG, "User updated: $user")
+//                val user: HashMap<String, IUser> = snapshot.value as HashMap<String, IUser>
+
+//                Log.i(LOG_TAG, "User updated: $user")
 
                 // TODO: update map with this data
             }
@@ -35,7 +39,7 @@ class UserRepositoryImpl @Inject constructor() :
         users.addValueEventListener(driversListener)
     }
 
-    override suspend fun createUser(user: User) {
+    override suspend fun createUser(user: IUser) {
         users.child(user.id).setValue(user).await()
     }
 }

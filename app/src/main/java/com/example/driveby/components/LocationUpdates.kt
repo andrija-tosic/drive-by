@@ -1,10 +1,12 @@
 package com.example.driveby.components
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.os.Looper
 import androidx.annotation.RequiresPermission
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
@@ -17,7 +19,9 @@ import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import java.util.concurrent.TimeUnit
 
-@SuppressLint("MissingPermission")
+@RequiresPermission(
+    anyOf = [Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION],
+)
 @Composable
 fun LocationUpdates(onLocationUpdate: (result: LocationResult) -> Unit) {
     val locationRequest = LocationRequest.Builder(
