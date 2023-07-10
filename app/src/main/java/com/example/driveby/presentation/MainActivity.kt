@@ -13,8 +13,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
+import com.example.driveby.components.BottomBar
 import com.example.driveby.navigation.NavGraph
-import com.example.driveby.presentation.home.BottomBar
 import com.example.driveby.ui.theme.DriveByTheme
 import dagger.hilt.android.AndroidEntryPoint
 import com.google.accompanist.navigation.animation.rememberAnimatedNavController

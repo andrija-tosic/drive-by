@@ -23,8 +23,8 @@ import androidx.compose.ui.unit.sp
 import com.example.driveby.components.EmailField
 import com.example.driveby.components.PasswordField
 import com.example.driveby.components.SmallSpacer
-import com.example.driveby.core.Constants.NO_ACCOUNT
-import com.example.driveby.core.Constants.SIGN_IN_BUTTON
+import com.example.driveby.core.Strings.NO_ACCOUNT
+import com.example.driveby.core.Strings.SIGN_IN_BUTTON
 
 @Composable
 @ExperimentalComposeUiApi

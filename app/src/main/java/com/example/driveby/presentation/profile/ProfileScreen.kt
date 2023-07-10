@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -16,10 +18,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.driveby.components.SmallSpacer
 import com.example.driveby.components.TopBar
 import com.example.driveby.core.Strings.LOG_TAG
@@ -34,6 +40,7 @@ fun ProfileScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     Scaffold(
         topBar = {
@@ -62,8 +69,15 @@ fun ProfileScreen(
                             Text(viewModel.user!!.name + " " + viewModel.user!!.lastName)
                             SmallSpacer()
                             AsyncImage(
-                                model = viewModel.user!!.imageUrl,
-                                contentDescription = null,
+                                model = ImageRequest.Builder(context)
+                                    .data(viewModel.user!!.imageUrl)
+                                    .crossfade(true)
+                                    .build(),
+                                modifier = Modifier
+                                    .size(58.dp)
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop,
+                                contentDescription = null
                             )
                             SmallSpacer()
                             Text(

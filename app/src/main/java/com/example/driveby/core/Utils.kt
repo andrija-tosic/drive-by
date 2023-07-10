@@ -6,6 +6,10 @@ import android.util.Log
 import android.widget.Toast.LENGTH_LONG
 import android.widget.Toast.makeText
 import com.example.driveby.core.Strings.LOG_TAG
+import com.example.driveby.domain.model.Driver
+import com.example.driveby.domain.model.Passenger
+import com.example.driveby.domain.model.UserType
+import com.google.firebase.database.DataSnapshot
 
 class Utils {
     companion object {
@@ -32,6 +36,13 @@ class Utils {
             )
 
             return results[0].toDouble()
+        }
+
+    fun snapshotToIUser(userSnapshot: DataSnapshot) =
+        when ((userSnapshot.value as HashMap<String, *>)["userType"]) {
+            UserType.Passenger.name -> userSnapshot.getValue(Passenger::class.java)!!
+            UserType.Driver.name -> userSnapshot.getValue(Driver::class.java)!!
+            else -> userSnapshot.getValue(Passenger::class.java)!!
         }
     }
 }

@@ -8,14 +8,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.driveby.core.Strings.LOG_TAG
 import com.example.driveby.core.Utils.Companion.distance
+import com.example.driveby.core.Utils.Companion.snapshotToIUser
 import com.example.driveby.domain.model.Driver
 import com.example.driveby.domain.model.IUser
 import com.example.driveby.domain.model.SearchFilters
-import com.example.driveby.domain.model.User
 import com.example.driveby.domain.model.UserType
 import com.example.driveby.domain.repository.AuthRepository
 import com.example.driveby.domain.repository.UserRepository
 import com.google.android.gms.location.LocationResult
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.ValueEventListener
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -26,12 +29,56 @@ class HomeViewModel @Inject constructor(
     private val userRepo: UserRepository,
     private val authRepo: AuthRepository
 ) : ViewModel() {
-    var drivers = mutableListOf<Driver>()
+    var usersOnMap = mutableListOf<IUser>()
     var currentUser by mutableStateOf<IUser?>(null)
+
+    private val usersListener = object : ValueEventListener {
+        override fun onDataChange(snapshot: DataSnapshot) {
+
+            // snapshot value may be null
+            if (snapshot.value != null) {
+                val user: HashMap<String, IUser> = snapshot.value as HashMap<String, IUser>
+
+                Log.i(LOG_TAG, "User updated: $user")
+
+                loadFilteredUsers(SearchFilters())
+            }
+        }
+
+        override fun onCancelled(error: DatabaseError) {
+            Log.w(LOG_TAG, "usersListener:onCancelled", error.toException())
+        }
+    }
+
+    private val currentUserListener = object : ValueEventListener {
+        override fun onDataChange(snapshot: DataSnapshot) {
+
+            // snapshot value may be null
+            if (snapshot.value != null) {
+                val user: HashMap<String, IUser> = snapshot.value as HashMap<String, IUser>
+
+                Log.i(LOG_TAG, "User updated: $user")
+
+                loadCurrentUser()
+            }
+        }
+
+        override fun onCancelled(error: DatabaseError) {
+            Log.w(LOG_TAG, "usersListener:onCancelled", error.toException())
+        }
+    }
 
     init {
         loadFilteredUsers(SearchFilters())
-        getUser()
+        loadCurrentUser()
+        userRepo.users.addValueEventListener(usersListener)
+        userRepo.users.child(authRepo.currentUser!!.uid).addValueEventListener(currentUserListener)
+    }
+
+    override fun onCleared() {
+        super.onCleared()
+        userRepo.users.removeEventListener(usersListener)
+        userRepo.users.child(authRepo.currentUser!!.uid).removeEventListener(currentUserListener)
     }
 
     fun updateUserLocation(location: LocationResult) {
@@ -46,15 +93,10 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    fun getUser() = viewModelScope.launch {
+    private fun loadCurrentUser() = viewModelScope.launch {
         val res = userRepo.users.child(authRepo.currentUser!!.uid).get().await()
 
-        Log.i(LOG_TAG, res.value.toString())
-
-        when ((res.value as HashMap<String, *>)["userType"]) {
-            UserType.Passenger.name -> currentUser = res.getValue(User::class.java)
-            UserType.Driver.name -> currentUser = res.getValue(Driver::class.java)
-        }
+        currentUser = snapshotToIUser(res)
 
         Log.i(LOG_TAG, currentUser.toString())
     }
@@ -62,50 +104,108 @@ class HomeViewModel @Inject constructor(
     fun loadFilteredUsers(searchFilters: SearchFilters) = viewModelScope.launch {
         val currentUserSnapshot = userRepo.users.child(authRepo.currentUser!!.uid).get().await()
 
-        val currentUser: IUser = when ((currentUserSnapshot.value as HashMap<String, *>)["userType"]) {
-            UserType.Passenger.name -> currentUserSnapshot.getValue(User::class.java)!!
-            UserType.Driver.name -> currentUserSnapshot.getValue(Driver::class.java)!!
-            else -> currentUserSnapshot.getValue(User::class.java)!!
-        }
+        val currentUser: IUser =
+            snapshotToIUser(currentUserSnapshot)
 
         val usersSnapshot = userRepo.users.get().await()
 
-        val drivers = usersSnapshot.children.mapNotNull {
-            when ((currentUserSnapshot.value as HashMap<String, *>)["userType"]) {
-                UserType.Passenger.name -> currentUserSnapshot.getValue(User::class.java)!!
-                UserType.Driver.name -> currentUserSnapshot.getValue(Driver::class.java)!!
-                else -> currentUserSnapshot.getValue(User::class.java)!!
-            }
-        }.filter { it.userType == UserType.Driver } as MutableCollection<Driver>
+        val usersToFilter = usersSnapshot.children.mapNotNull {
+            snapshotToIUser(it)
+        } as MutableCollection<IUser>
 
-        this@HomeViewModel.drivers = when (currentUser.userType) {
-            UserType.Passenger -> drivers.filter {
-                it.score >= searchFilters.stars
-                        && it.car.seats >= searchFilters.seats
-                        && distance(
+        usersOnMap = when (currentUser.userType) {
+            UserType.Passenger -> usersToFilter.filter {
+                val isDriver = it.userType == UserType.Driver
+                val hasRatings = isDriver && (it as Driver).ratingsCount > 0
+                val meetsSeats = isDriver && (it as Driver).car.seats >= searchFilters.seats
+
+                val meetsDistance = distance(
                     currentUser.latitude,
                     currentUser.longitude,
                     it.latitude,
                     it.longitude
                 ).toInt() <= searchFilters.radius
+
+                val isNotInTransit = isDriver && !(it as Driver).drive.active
+
+                val meetsQuery =
+                    when (searchFilters.query.isNotBlank()) {
+                        true -> (it.name.contains(
+                            searchFilters.query,
+                            ignoreCase = true
+                        ) || it.lastName.contains(searchFilters.query, ignoreCase = true))
+
+                        false -> true
+                    }
+
+                Log.i(LOG_TAG, "$isDriver $meetsSeats $meetsDistance $meetsQuery $isNotInTransit")
+
+                when (hasRatings) {
+                    true -> (it as Driver).ratingsSum / it.ratingsCount >= searchFilters.stars
+                            && meetsSeats
+                            && meetsDistance
+                            && meetsQuery
+                            && isNotInTransit
+
+                    false -> isDriver && meetsSeats && meetsDistance && meetsQuery && isNotInTransit
+                }
             }.toMutableList()
 
-            UserType.Driver -> drivers.toMutableList()
-        }
+            UserType.Driver -> usersToFilter.filter {
+                it.userType == UserType.Passenger
+            }.toMutableList()
 
-        Log.i(LOG_TAG, this@HomeViewModel.drivers.toString())
+        }
+        Log.i(LOG_TAG, currentUser.userType.name + ", " + usersOnMap.toString())
+    }
+
+    // should be called by passenger only
+    fun addPassengerToDrive(selectedDriver: Driver) = viewModelScope.launch {
+        userRepo.users
+            .child(selectedDriver.id)
+            .child("drive")
+            .child("passengers")
+            .child(currentUser!!.id).setValue(currentUser)
     }
 
     // should be called by driver only
-    fun startRide() = viewModelScope.launch {
+    fun startDrive() = viewModelScope.launch {
         val driverSnapshot = userRepo.users.child(authRepo.currentUser!!.uid).get().await()
-        val currentUser: IUser = driverSnapshot.getValue(Driver::class.java)!!
-        userRepo.users.child(currentUser.id).child("drive").setValue(object {
-            val active = true
-            val startLatitude = currentUser.latitude
-            val startLongitude = currentUser.longitude
-            val endLatitude = null
-            val endLongitude = null
-        })
+        val currentDriver = driverSnapshot.getValue(Driver::class.java)!!
+
+        val map = mapOf<String, Any>(
+            "active" to true,
+            "startLatitude" to currentDriver.latitude,
+            "startLongitude" to currentDriver.longitude,
+            "endLatitude" to -1.0,
+            "endLongitude" to -1.0
+        )
+
+        userRepo.users.child(currentDriver.id).child("drive").updateChildren(map)
+    }
+
+    // should be called by driver only
+    fun endDrive() = viewModelScope.launch {
+        val driverSnapshot = userRepo.users.child(authRepo.currentUser!!.uid).get().await()
+        val currentDriver = driverSnapshot.getValue(Driver::class.java)!!
+        currentDriver.drive.active = false
+        currentDriver.drive.endLatitude = currentDriver.latitude
+        currentDriver.drive.endLongitude = currentDriver.longitude
+
+        val distance = distance(
+            currentDriver.drive.startLatitude,
+            currentDriver.drive.startLongitude,
+            currentDriver.drive.endLatitude,
+            currentDriver.drive.endLongitude
+        ).toInt()
+
+        currentDriver.score += distance
+
+        currentDriver.drive.passengers.forEach {
+            it.score += distance
+            userRepo.users.child(it.id).setValue(it)
+        }
+
+        userRepo.users.child(currentDriver.id).setValue(currentDriver)
     }
 }

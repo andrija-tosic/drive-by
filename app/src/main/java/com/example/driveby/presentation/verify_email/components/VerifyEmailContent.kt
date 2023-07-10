@@ -10,8 +10,8 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.driveby.components.SmallSpacer
-import com.example.driveby.core.Constants.ALREADY_VERIFIED
-import com.example.driveby.core.Constants.SPAM_EMAIL
+import com.example.driveby.core.Strings.ALREADY_VERIFIED
+import com.example.driveby.core.Strings.SPAM_EMAIL
 
 @Composable
 fun VerifyEmailContent(

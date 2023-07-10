@@ -4,11 +4,11 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Location
 import android.util.Log
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -17,10 +17,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.BottomSheetScaffold
 import androidx.compose.material.BottomSheetValue
 import androidx.compose.material.ExperimentalMaterialApi
+import androidx.compose.material.Surface
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DirectionsCar
 import androidx.compose.material.icons.outlined.FilterAlt
-import androidx.compose.material.icons.outlined.SwipeDown
+import androidx.compose.material.icons.outlined.SwipeDownAlt
+import androidx.compose.material.icons.outlined.SwipeUpAlt
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.sharp.MyLocation
 import androidx.compose.material.rememberBottomSheetScaffoldState
@@ -30,8 +32,7 @@ import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SmallFloatingActionButton
@@ -47,35 +48,37 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.navigation.NavDestination
-import androidx.navigation.NavDestination.Companion.hierarchy
-import androidx.navigation.NavGraph.Companion.findStartDestination
-import androidx.navigation.NavHostController
-import androidx.navigation.compose.currentBackStackEntryAsState
-import com.example.driveby.BottomBarScreen
 import com.example.driveby.components.LocationUpdates
 import com.example.driveby.components.SmallSpacer
 import com.example.driveby.core.Strings.LOG_TAG
 import com.example.driveby.domain.model.Driver
 import com.example.driveby.domain.model.SearchFilters
 import com.example.driveby.domain.model.UserType
+import com.example.driveby.presentation.sign_in.profile.UserListItem
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapEffect
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.MapsComposeExperimentalApi
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class,
+    MapsComposeExperimentalApi::class
+)
 @Composable
 fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
@@ -106,7 +109,7 @@ fun HomeScreen(
         return
     }
 
-    var showDriverInfoDialog = false
+    var showDriverInfoDialog by remember { mutableStateOf(false) }
     var selectedDriver: Driver? = null
 
     LocationUpdates(onLocationUpdate = {
@@ -114,6 +117,8 @@ fun HomeScreen(
         currentLocation = it.lastLocation
         viewModel.updateUserLocation(it)
     })
+
+
 
     Scaffold(content = { padding ->
         Box(
@@ -132,6 +137,12 @@ fun HomeScreen(
                             var query by rememberSaveable { mutableStateOf("") }
                             var active by rememberSaveable { mutableStateOf(false) }
 
+                            Icon(
+                                Icons.Outlined.SwipeUpAlt,
+                                contentDescription = null
+                            )
+
+
                             DockedSearchBar(
                                 active = active,
                                 onActiveChange = { active = it },
@@ -146,7 +157,6 @@ fun HomeScreen(
                                     )
                                 },
                             ) {}
-
 
                             Column(
                                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -165,7 +175,6 @@ fun HomeScreen(
                                     Text(text = "${radiusRange.start.toInt()} m")
                                     Text(text = "${radiusRange.endInclusive.toInt()} m")
                                 }
-
 
                                 Slider(
                                     value = radius.value.toFloat(),
@@ -211,6 +220,7 @@ fun HomeScreen(
                                 Button(onClick = {
                                     viewModel.loadFilteredUsers(
                                         SearchFilters(
+                                            query,
                                             radius.value,
                                             seats.value,
                                             rating.value
@@ -227,7 +237,7 @@ fun HomeScreen(
                                 SmallSpacer()
 
                                 Icon(
-                                    Icons.Outlined.SwipeDown,
+                                    Icons.Outlined.SwipeDownAlt,
                                     contentDescription = null
                                 )
                             }
@@ -237,7 +247,7 @@ fun HomeScreen(
                     }
                 },
                 scaffoldState = bottomSheetScaffoldState
-            ) { it ->
+            ) {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -255,34 +265,58 @@ fun HomeScreen(
                             isMyLocationEnabled = true
                         )
                     ) {
-                        viewModel.drivers.forEach { driver ->
-//                            if (viewModel.currentUser?.uid != it.id) {
-                            Marker(
-                                MarkerState(LatLng(driver.latitude, driver.longitude)),
-                                onClick = {
-                                    selectedDriver = driver
-                                    showDriverInfoDialog = true
-
-                                    true
-                                },
-                                title = "Driver ${driver.name} ${driver.lastName}\n" +
-                                        "Score: ${driver.score}\n" +
-                                        "Car: ${driver.car.brand} ${driver.car.model} (${driver.car.seats} seater)"
-                            )
-//                            }
+                        MapEffect {
+                            it.setOnCameraIdleListener {
+                                scope.launch {
+                                    if (viewModel.currentUser?.userType == UserType.Driver
+                                        && (viewModel.currentUser as Driver).drive.active && currentLocation != null
+                                    ) {
+                                        cameraPositionState.animate(
+                                            update = CameraUpdateFactory.newLatLngZoom(
+                                                LatLng(
+                                                    currentLocation!!.latitude,
+                                                    currentLocation!!.longitude
+                                                ),
+                                                16f
+                                            ),
+                                            durationMs = 667
+                                        )
+                                    }
+                                }
+                            }
                         }
-                    }
+                        if (currentLocation != null) {
+                            Circle(
+                                center = LatLng(
+                                    currentLocation!!.latitude,
+                                    currentLocation!!.longitude
+                                ),
+                                fillColor = Color.Blue.copy(alpha = 0.67f),
+                                visible = true
+                            )
+                        }
 
-                    Dialog(onDismissRequest = {}) {
-                        Box(
-                            Modifier
-                                .fillMaxWidth()
-                        ) {
-                            if (selectedDriver != null) {
-                                Text(
-                                    "Driver ${selectedDriver!!.name} ${selectedDriver!!.lastName}\n" +
-                                            "Score: ${selectedDriver!!.score}\n" +
-                                            "Car: ${selectedDriver!!.car.brand} ${selectedDriver!!.car.model} (${selectedDriver!!.car.seats} seater)"
+                        viewModel.usersOnMap.forEach { user ->
+                            if (viewModel.currentUser?.id != user.id) {
+                                Marker(
+                                    MarkerState(LatLng(user.latitude, user.longitude)),
+                                    onClick = {
+                                        if (user.userType == UserType.Driver) {
+                                            selectedDriver = user as Driver
+                                            showDriverInfoDialog = true
+                                            Log.i(LOG_TAG, "hi")
+                                            Log.i(LOG_TAG, selectedDriver.toString())
+                                            Log.i(LOG_TAG, showDriverInfoDialog.toString())
+                                        }
+
+                                        true
+                                    },
+                                    title = when (user.userType) {
+                                        UserType.Passenger -> "Passenger ${user.name} ${user.lastName}"
+                                        UserType.Driver -> "Driver ${user.name} ${user.lastName}\n" +
+                                                "Score: ${user.score}\n" +
+                                                "Car: ${(user as Driver).car.brand} ${user.car.model} (${user.car.seats} seater)"
+                                    }
                                 )
                             }
                         }
@@ -305,7 +339,8 @@ fun HomeScreen(
                                                     currentLocation!!.longitude
                                                 ),
                                                 16f
-                                            )
+                                            ),
+                                            durationMs = 667
                                         )
                                     }
                                 }
@@ -325,84 +360,79 @@ fun HomeScreen(
                         )
                     }
 
-                    if (viewModel.currentUser?.userType == UserType.Driver) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .padding(bottom = 192.dp, end = 32.dp)
-                        ) {
-                            ExtendedFloatingActionButton(
-                                modifier = Modifier
-                                    .size(48.dp)
-                                    .align(Alignment.BottomEnd),
-                                text = {
-                                    Text("Start drive")
-                                },
-                                icon = {
-                                    Icon(
-                                        modifier = Modifier.size(32.dp),
-                                        imageVector = Icons.Outlined.DirectionsCar,
-                                        contentDescription = "Start drive",
+
+                    if (showDriverInfoDialog) {
+                        Dialog(onDismissRequest = { showDriverInfoDialog = false }) {
+                            Surface(
+                                modifier = Modifier.align(Alignment.Center),
+                                onClick = { showDriverInfoDialog = false },
+                                shape = RectangleShape,
+                                color = MaterialTheme.colorScheme.background,
+                                border = BorderStroke(Dp.Hairline, Color.Black),
+                            ) {
+                                UserListItem(
+                                    photoUrl = selectedDriver!!.imageUrl,
+                                    title = "Driver ${selectedDriver!!.name} ${selectedDriver!!.lastName}\n" +
+                                            "Score: ${selectedDriver!!.score}\n" +
+                                            "Car: ${selectedDriver!!.car.brand} ${selectedDriver!!.car.model} (${selectedDriver!!.car.seats} seater)",
+                                    subtitle = "Subtitle"
+                                )
+
+//                                Box(
+//                                    Modifier
+//                                        .padding(16.dp)
+//                                        .background(MaterialTheme.colorScheme.background)
+//                                        .align(Alignment.Center)
+//                                ) {
+//                                    if (selectedDriver != null) {
+//                                        Column {
+//                                            Text(
+//                                                "Driver ${selectedDriver!!.name} ${selectedDriver!!.lastName}\n" +
+//                                                        "Score: ${selectedDriver!!.score}\n" +
+//                                                        "Car: ${selectedDriver!!.car.brand} ${selectedDriver!!.car.model} (${selectedDriver!!.car.seats} seater)"
+//                                            )
+                                SmallSpacer()
+                                Button(onClick = {
+                                    viewModel.addPassengerToDrive(
+                                        selectedDriver!!
                                     )
-                                },
-                                onClick = { viewModel.startRide() },
-                                expanded = true,
-                            )
+                                }) {
+                                    Text("Request a drive")
+                                }
+//                                        }
+//                                    }
+//                                }
+                            }
                         }
                     }
                 }
             }
         }
-    })
-}
-
-@Composable
-fun BottomBar(navController: NavHostController) {
-    val screens = listOf(
-        BottomBarScreen.Leaderboard,
-        BottomBarScreen.Home,
-        BottomBarScreen.Profile,
-    )
-    val navBackStackEntry by navController.currentBackStackEntryAsState()
-    val currentDestination = navBackStackEntry?.destination
-
-    val bottomBarDestination = screens.any { it.route == currentDestination?.route }
-    if (bottomBarDestination) {
-        NavigationBar {
-            screens.forEach { screen ->
-                AddItem(
-                    screen = screen,
-                    currentDestination = currentDestination,
-                    navController = navController
+    },
+        floatingActionButton = {
+            if (viewModel.currentUser?.userType == UserType.Driver) {
+                ExtendedFloatingActionButton(
+                    text = {
+                        when ((viewModel.currentUser as Driver).drive.active) {
+                            true -> Text("End drive")
+                            false -> Text("Start drive")
+                        }
+                    },
+                    icon = {
+                        Icon(
+                            modifier = Modifier.size(32.dp),
+                            imageVector = Icons.Outlined.DirectionsCar,
+                            contentDescription = "Drive toggle",
+                        )
+                    },
+                    onClick = {
+                        when ((viewModel.currentUser as Driver).drive.active) {
+                            true -> viewModel.endDrive()
+                            false -> viewModel.startDrive()
+                        }
+                    },
+                    expanded = true,
                 )
-            }
-        }
-    }
-}
-
-@Composable
-fun RowScope.AddItem(
-    screen: BottomBarScreen,
-    currentDestination: NavDestination?,
-    navController: NavHostController
-) {
-    NavigationBarItem(
-        label = {
-            Text(text = screen.title)
-        },
-        icon = {
-            Icon(
-                imageVector = screen.icon,
-                contentDescription = "Navigation Icon"
-            )
-        },
-        selected = currentDestination?.hierarchy?.any {
-            it.route == screen.route
-        } == true,
-        onClick = {
-            navController.navigate(screen.route) {
-                popUpTo(navController.graph.findStartDestination().id)
-                launchSingleTop = true
             }
         }
     )

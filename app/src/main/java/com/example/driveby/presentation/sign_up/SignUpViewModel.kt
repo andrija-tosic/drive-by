@@ -11,7 +11,7 @@ import com.example.driveby.core.Strings.LOG_TAG
 import com.example.driveby.domain.model.Car
 import com.example.driveby.domain.model.Driver
 import com.example.driveby.domain.model.Response
-import com.example.driveby.domain.model.User
+import com.example.driveby.domain.model.Passenger
 import com.example.driveby.domain.model.UserType
 import com.example.driveby.domain.repository.AuthRepository
 import com.example.driveby.domain.repository.SendEmailVerificationResponse
@@ -62,8 +62,8 @@ class SignUpViewModel @Inject constructor(
                         uploadPhotoToFirebaseStorageAsync(Uri.parse(localImageUri)).await()
 
                     val user = when (userType) {
-                        UserType.Passenger -> User(
-                            response.data!!.user!!.uid,
+                        UserType.Passenger -> Passenger(
+                            response.data.user!!.uid,
                             email,
                             firstName,
                             lastName,
@@ -74,6 +74,7 @@ class SignUpViewModel @Inject constructor(
                             0.0,
                             0
                         )
+
                         UserType.Driver -> Driver(
                             response.data!!.user!!.uid,
                             email,
@@ -84,6 +85,8 @@ class SignUpViewModel @Inject constructor(
                             userType,
                             0.0,
                             0.0,
+                            0,
+                            0,
                             0,
                             car
                         )

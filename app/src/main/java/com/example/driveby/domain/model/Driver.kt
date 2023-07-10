@@ -10,6 +10,9 @@ class Driver(
     override val userType: UserType = UserType.Driver,
     override val latitude: Double = 0.0,
     override val longitude: Double = 0.0,
-    override val score: Int = 0,
-    val car: Car = Car()
-    ) : IUser
+    override var score: Int = 0,
+    val ratingsCount: Int = 0,
+    val ratingsSum: Int = 0,
+    val car: Car = Car(),
+    val drive: Drive = Drive()
+) : IUser

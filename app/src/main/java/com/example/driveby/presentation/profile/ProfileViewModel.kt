@@ -7,11 +7,9 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.driveby.core.Strings.LOG_TAG
-import com.example.driveby.domain.model.Driver
-import com.example.driveby.domain.model.Response
+import com.example.driveby.core.Utils.Companion.snapshotToIUser
 import com.example.driveby.domain.model.IUser
-import com.example.driveby.domain.model.User
-import com.example.driveby.domain.model.UserType
+import com.example.driveby.domain.model.Response
 import com.example.driveby.domain.repository.AuthRepository
 import com.example.driveby.domain.repository.ReloadUserResponse
 import com.example.driveby.domain.repository.RevokeAccessResponse
@@ -37,17 +35,13 @@ class ProfileViewModel @Inject constructor(
         getUser()
     }
 
-    fun getUser() = viewModelScope.launch {
+    private fun getUser() = viewModelScope.launch {
         val res = userRepo.users.child(authRepo.currentUser!!.uid).get().await()
 
         Log.i(LOG_TAG, res.value.toString())
 
-        when ((res.value as HashMap<String, *>)["userType"]) {
-            UserType.Passenger.name -> user = res.getValue(User::class.java)
-            UserType.Driver.name -> user = res.getValue(Driver::class.java)
-        }
-
-        Log.i(LOG_TAG, user.toString())
+        user = snapshotToIUser(res)
+        Log.i(LOG_TAG, "Profile " + user.toString())
     }
 
     fun reloadUser() = viewModelScope.launch {

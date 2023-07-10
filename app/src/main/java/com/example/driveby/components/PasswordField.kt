@@ -14,7 +14,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.input.VisualTransformation
-import com.example.driveby.core.Constants.PASSWORD_LABEL
+import com.example.driveby.core.Strings.PASSWORD_LABEL
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

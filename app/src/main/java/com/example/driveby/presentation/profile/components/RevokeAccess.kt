@@ -6,10 +6,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.driveby.components.ProgressBar
-import com.example.driveby.core.Constants.ACCESS_REVOKED_MESSAGE
-import com.example.driveby.core.Constants.REVOKE_ACCESS_MESSAGE
-import com.example.driveby.core.Constants.SENSITIVE_OPERATION_MESSAGE
-import com.example.driveby.core.Constants.SIGN_OUT_ITEM
+import com.example.driveby.core.Strings.ACCESS_REVOKED_MESSAGE
+import com.example.driveby.core.Strings.REVOKE_ACCESS_MESSAGE
+import com.example.driveby.core.Strings.SENSITIVE_OPERATION_MESSAGE
+import com.example.driveby.core.Strings.SIGN_OUT_ITEM
 import com.example.driveby.core.Utils.Companion.showToast
 import com.example.driveby.domain.model.Response
 import kotlinx.coroutines.launch

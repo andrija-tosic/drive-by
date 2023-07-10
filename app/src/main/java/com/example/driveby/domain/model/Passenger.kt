@@ -1,6 +1,6 @@
 package com.example.driveby.domain.model
 
-class User(
+class Passenger(
     override val id: String = "",
     override val email: String = "",
     override val name: String = "",
@@ -10,7 +10,7 @@ class User(
     override val userType: UserType = UserType.Passenger,
     override val latitude: Double = 0.0,
     override val longitude: Double = 0.0,
-    override val score: Int = 0
+    override var score: Int = 0,
 ) : IUser {
 
 }
