@@ -76,7 +76,7 @@ class SignUpViewModel @Inject constructor(
                         )
 
                         UserType.Driver -> Driver(
-                            response.data!!.user!!.uid,
+                            response.data.user!!.uid,
                             email,
                             firstName,
                             lastName,
@@ -106,8 +106,10 @@ class SignUpViewModel @Inject constructor(
     private suspend fun uploadPhotoToFirebaseStorageAsync(uri: Uri) = viewModelScope.async {
         val photoRef = Firebase.storage.reference.child("photos/${uri.lastPathSegment}")
 
-        val uploadTask = photoRef.putFile(uri).await()
+        photoRef.putFile(uri).await()
 
-        return@async uploadTask.uploadSessionUri.toString()
+        val downloadUri = photoRef.downloadUrl.await()
+
+        return@async downloadUri.toString()
     }
 }

@@ -14,5 +14,6 @@ class Driver(
     val ratingsCount: Int = 0,
     val ratingsSum: Int = 0,
     val car: Car = Car(),
-    val drive: Drive = Drive()
-) : IUser
+    val drive: Drive = Drive(),
+    override val inTransit: Boolean = false
+) : User

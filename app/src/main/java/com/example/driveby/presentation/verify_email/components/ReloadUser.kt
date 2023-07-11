@@ -5,7 +5,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.driveby.components.ProgressBar
 import com.example.driveby.domain.model.Response
-import com.example.driveby.presentation.sign_in.profile.ProfileViewModel
+import com.example.driveby.presentation.profile.ProfileViewModel
 
 @Composable
 fun ReloadUser(

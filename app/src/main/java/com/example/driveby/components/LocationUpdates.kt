@@ -29,7 +29,7 @@ fun LocationUpdates(onLocationUpdate: (result: LocationResult) -> Unit) {
         TimeUnit.SECONDS.toMillis(3)
     ).build()
 
-    LocationUpdatesEffect(locationRequest!!) { result ->
+    LocationUpdatesEffect(locationRequest) { result ->
         onLocationUpdate(result)
     }
 }
@@ -46,7 +46,6 @@ fun LocationUpdatesEffect(
     val context = LocalContext.current
     val currentOnUpdate by rememberUpdatedState(newValue = onUpdate)
 
-    // Whenever on of these parameters changes, dispose and restart the effect.
     DisposableEffect(locationRequest, lifecycleOwner) {
         val locationClient = LocationServices.getFusedLocationProviderClient(context)
         val locationCallback: LocationCallback = object : LocationCallback() {
@@ -64,10 +63,8 @@ fun LocationUpdatesEffect(
             }
         }
 
-        // Add the observer to the lifecycle
         lifecycleOwner.lifecycle.addObserver(observer)
 
-        // When the effect leaves the Composition, remove the observer
         onDispose {
             locationClient.removeLocationUpdates(locationCallback)
             lifecycleOwner.lifecycle.removeObserver(observer)

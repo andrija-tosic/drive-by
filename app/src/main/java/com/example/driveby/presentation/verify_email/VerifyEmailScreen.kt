@@ -1,6 +1,5 @@
 package com.example.driveby.presentation.verify_email
 
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -13,10 +12,9 @@ import com.example.driveby.components.TopBar
 import com.example.driveby.core.Strings.EMAIL_NOT_VERIFIED_MESSAGE
 import com.example.driveby.core.Utils.Companion.showToast
 import com.example.driveby.navigation.Screen
-import com.example.driveby.presentation.sign_in.profile.ProfileViewModel
-import com.example.driveby.presentation.sign_in.profile.RevokeAccess
+import com.example.driveby.presentation.profile.ProfileViewModel
+import com.example.driveby.presentation.profile.components.RevokeAccess
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VerifyEmailScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
@@ -32,9 +30,6 @@ fun VerifyEmailScreen(
                 title = Screen.VerifyEmailScreen.route,
                 signOut = {
                     viewModel.signOut()
-                },
-                revokeAccess = {
-                    viewModel.revokeAccess()
                 }
             )
         },

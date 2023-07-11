@@ -11,6 +11,7 @@ class Passenger(
     override val latitude: Double = 0.0,
     override val longitude: Double = 0.0,
     override var score: Int = 0,
-) : IUser {
+    override val inTransit: Boolean = false
+) : User {
 
 }

@@ -21,18 +21,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.example.driveby.core.Utils.Companion.showToast
 
 @Composable
 fun CameraCapture(onPhotoCaptured: (Uri) -> Unit) {
     val context = LocalContext.current
     val photoUri = remember { mutableStateOf<Uri?>(null) }
+    val pictureTaken = remember { mutableStateOf(false)}
 
     val takePicture =
         rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
             if (success) {
-                photoUri.value?.let { uri ->
-                    onPhotoCaptured(uri)
-                }
+                pictureTaken.value = true
+                photoUri.value?.let { onPhotoCaptured(it) }
             }
         }
 
@@ -41,35 +42,34 @@ fun CameraCapture(onPhotoCaptured: (Uri) -> Unit) {
             if (isGranted) {
                 val imageUri = createImageUri(context)
                 imageUri?.let {
-                    photoUri.value = it
                     takePicture.launch(it)
                 }
             } else {
-                // Handle permission denied case
+                showToast(context, "Camera permission denied.")
             }
         }
 
     Column {
-        if (photoUri.value != null) {
+        if (pictureTaken.value) {
             Text("Photo captured!")
         }
         OutlinedButton(
             onClick = {
-            val permission = Manifest.permission.CAMERA
-            if (ContextCompat.checkSelfPermission(
-                    context,
-                    permission
-                ) == PackageManager.PERMISSION_GRANTED
-            ) {
-                val imageUri = createImageUri(context)
-                imageUri?.let {
-                    photoUri.value = it
-                    takePicture.launch(it)
+                val permission = Manifest.permission.CAMERA
+                if (ContextCompat.checkSelfPermission(
+                        context,
+                        permission
+                    ) == PackageManager.PERMISSION_GRANTED
+                ) {
+                    val imageUri = createImageUri(context)
+                    imageUri?.let {
+                        photoUri.value = it
+                        takePicture.launch(it)
+                    }
+                } else {
+                    requestPermissionLauncher.launch(permission)
                 }
-            } else {
-                requestPermissionLauncher.launch(permission)
-            }
-        }) {
+            }) {
             Icon(
                 imageVector = Icons.Outlined.PhotoCamera,
                 contentDescription = null

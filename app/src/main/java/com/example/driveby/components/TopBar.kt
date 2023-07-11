@@ -16,15 +16,13 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import com.example.driveby.core.Strings.REVOKE_ACCESS_ITEM
 import com.example.driveby.core.Strings.SIGN_OUT_ITEM
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TopBar(
     title: String,
-    signOut: () -> Unit,
-    revokeAccess: () -> Unit
+    signOut: () -> Unit
 ) {
     var openMenu by remember { mutableStateOf(false) }
 
@@ -69,16 +67,6 @@ fun TopBar(
                     },
                     onClick = {
                         signOut()
-                        openMenu = !openMenu
-                    }
-                )
-                DropdownMenuItem({
-                    Text(
-                        text = REVOKE_ACCESS_ITEM
-                    )
-                },
-                    onClick = {
-                        revokeAccess()
                         openMenu = !openMenu
                     }
                 )

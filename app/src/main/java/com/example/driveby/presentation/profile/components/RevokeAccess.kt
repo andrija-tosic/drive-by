@@ -1,4 +1,4 @@
-package com.example.driveby.presentation.sign_in.profile
+package com.example.driveby.presentation.profile.components
 
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
@@ -15,6 +15,7 @@ import com.example.driveby.domain.model.Response
 import kotlinx.coroutines.launch
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.remember
+import com.example.driveby.presentation.profile.ProfileViewModel
 import kotlinx.coroutines.CoroutineScope
 
 @Composable

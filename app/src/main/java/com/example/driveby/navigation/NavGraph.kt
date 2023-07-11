@@ -7,9 +7,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.navigation.NavHostController
 import com.example.driveby.presentation.home.HomeScreen
+import com.example.driveby.presentation.leaderboard.LeaderboardScreen
+import com.example.driveby.presentation.profile.ProfileScreen
 import com.example.driveby.presentation.sign_in.SignInScreen
-import com.example.driveby.presentation.sign_in.profile.LeaderboardScreen
-import com.example.driveby.presentation.sign_in.profile.ProfileScreen
 import com.example.driveby.presentation.sign_up.SignUpScreen
 import com.example.driveby.presentation.verify_email.VerifyEmailScreen
 import com.google.accompanist.navigation.animation.AnimatedNavHost

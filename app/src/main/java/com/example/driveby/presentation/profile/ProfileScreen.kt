@@ -1,4 +1,4 @@
-package com.example.driveby.presentation.sign_in.profile
+package com.example.driveby.presentation.profile
 
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
@@ -7,31 +7,26 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
-import com.example.driveby.components.SmallSpacer
 import com.example.driveby.components.TopBar
+import com.example.driveby.components.UserListItem
 import com.example.driveby.core.Strings.LOG_TAG
 import com.example.driveby.domain.model.Driver
 import com.example.driveby.domain.model.UserType
 import com.example.driveby.navigation.Screen
+import com.example.driveby.presentation.profile.components.RevokeAccess
 
 @Composable
 fun ProfileScreen(
@@ -40,7 +35,8 @@ fun ProfileScreen(
 ) {
     val snackbarHostState = remember { SnackbarHostState() }
     val coroutineScope = rememberCoroutineScope()
-    val context = LocalContext.current
+
+    val user by viewModel.user.collectAsState()
 
     Scaffold(
         topBar = {
@@ -49,9 +45,6 @@ fun ProfileScreen(
                 signOut = {
                     viewModel.signOut()
                     navigateToSignInScreen()
-                },
-                revokeAccess = {
-                    viewModel.revokeAccess()
                 }
             )
         },
@@ -59,49 +52,43 @@ fun ProfileScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
-                    .padding(top = 48.dp),
+                    .padding(padding),
                 contentAlignment = Alignment.TopCenter
             ) {
-                Column {
-                    if (viewModel.user != null) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    if (user != null) {
                         Row(horizontalArrangement = Arrangement.Center) {
-                            Text(viewModel.user!!.name + " " + viewModel.user!!.lastName)
-                            SmallSpacer()
-                            AsyncImage(
-                                model = ImageRequest.Builder(context)
-                                    .data(viewModel.user!!.imageUrl)
-                                    .crossfade(true)
-                                    .build(),
-                                modifier = Modifier
-                                    .size(58.dp)
-                                    .clip(CircleShape),
-                                contentScale = ContentScale.Crop,
-                                contentDescription = null
+                            UserListItem(
+                                user!!,
+                                user!!.name + " " + user!!.lastName,
+                                "${user!!.score} points",
+                                imageSize = 128.dp
                             )
-                            SmallSpacer()
-                            Text(
-                                text = "Your score:" + viewModel.user?.score.toString(),
-                                fontSize = 24.sp
-                            )
-                            SmallSpacer()
                         }
-                    }
 
-                    if (viewModel.user != null && viewModel.user!!.userType == UserType.Driver) {
-                        Row(horizontalArrangement = Arrangement.Center) {
-                            Text("Your car")
-                            Log.i(LOG_TAG, viewModel.user.toString())
-                            val driver = viewModel.user as Driver
+                        if (user!!.userType == UserType.Driver) {
+                            val driver = user as Driver
+
+                            Row(horizontalArrangement = Arrangement.Center) {
+                                if (driver.ratingsCount > 0) {
+                                    Text(
+                                        text = "Your rating: " + driver.ratingsSum / driver.ratingsCount + "/5"
+                                    )
+                                }
+                            }
+
                             val car = driver.car
+                            Log.i(LOG_TAG, user.toString())
 
-                            SmallSpacer()
-                            Text(car.brand)
-                            SmallSpacer()
-                            Text(car.model)
-                            SmallSpacer()
-                            Text(car.seats.toString())
-                            SmallSpacer()
+                            Row {
+                                Text("Your car: ")
+                                Text(car.brand + " ")
+                                Text(car.model + " ")
+                                Text("(${car.seats} seats)")
+                            }
                         }
                     }
                 }

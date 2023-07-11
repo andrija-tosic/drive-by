@@ -1,10 +1,11 @@
 package com.example.driveby.presentation.home
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.location.Location
 import android.util.Log
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,24 +14,23 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.BottomSheetScaffold
 import androidx.compose.material.BottomSheetValue
 import androidx.compose.material.ExperimentalMaterialApi
-import androidx.compose.material.Surface
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.DirectionsCar
+import androidx.compose.material.icons.outlined.ExpandLess
+import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.FilterAlt
-import androidx.compose.material.icons.outlined.SwipeDownAlt
-import androidx.compose.material.icons.outlined.SwipeUpAlt
+import androidx.compose.material.icons.outlined.People
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.sharp.MyLocation
 import androidx.compose.material.rememberBottomSheetScaffoldState
 import androidx.compose.material.rememberBottomSheetState
-import androidx.compose.material3.Button
 import androidx.compose.material3.DockedSearchBar
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -38,6 +38,8 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -48,23 +50,35 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.driveby.R
 import com.example.driveby.components.LocationUpdates
 import com.example.driveby.components.SmallSpacer
+import com.example.driveby.components.UserListItem
 import com.example.driveby.core.Strings.LOG_TAG
+import com.example.driveby.core.Utils.Companion.showToast
 import com.example.driveby.domain.model.Driver
+import com.example.driveby.domain.model.Passenger
 import com.example.driveby.domain.model.SearchFilters
 import com.example.driveby.domain.model.UserType
-import com.example.driveby.presentation.sign_in.profile.UserListItem
+import com.example.driveby.presentation.home.components.DriveFAB
+import com.example.driveby.presentation.home.components.DriverDialog
+import com.example.driveby.presentation.home.components.PassengerDialog
+import com.example.driveby.presentation.home.components.RatingDialog
+import com.example.driveby.presentation.home.components.UsersDialog
 import com.google.android.gms.maps.CameraUpdateFactory
+import com.google.android.gms.maps.model.BitmapDescriptor
+import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.Marker
+import com.google.firebase.database.DataSnapshot
+import com.google.firebase.database.DatabaseError
+import com.google.firebase.database.ValueEventListener
 import com.google.maps.android.compose.Circle
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapEffect
@@ -74,9 +88,12 @@ import com.google.maps.android.compose.MapsComposeExperimentalApi
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import com.google.maps.android.compose.rememberMarkerState
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class,
+@OptIn(
+    ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class,
     MapsComposeExperimentalApi::class
 )
 @Composable
@@ -84,18 +101,37 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
 
-    val nis = LatLng(43.32, 21.89)
+    val nis = LatLng(43.32, 21.90)
     val cameraPositionState = rememberCameraPositionState {
-        position = CameraPosition.fromLatLngZoom(nis, 10f)
+        position = CameraPosition.fromLatLngZoom(nis, 14f)
     }
-    var currentLocation: Location? = null
+    var currentLocation by remember {
+        mutableStateOf<Location?>(null)
+    }
 
     val bottomSheetScaffoldState = rememberBottomSheetScaffoldState(
         bottomSheetState = rememberBottomSheetState(
             initialValue = BottomSheetValue.Expanded
         )
     )
+
+    val showRatingDialog = viewModel.showRatingDialog
+
+    val showRatingDialogState by viewModel.showRatingDialog.collectAsState()
+
+    val drivenBy = viewModel.drivenBy
+    val drivenByState by viewModel.drivenBy.collectAsState()
+
+    var query by rememberSaveable { mutableStateOf("") }
+    val radiusRange = 0F..1000F
+    var radius by remember { mutableIntStateOf(radiusRange.endInclusive.toInt()) }
+    var seats by remember { mutableIntStateOf(1) }
+    var rating by remember { mutableIntStateOf(1) }
+
+    val usersOnMap by viewModel.usersOnMap.collectAsState()
+    val currentUser by viewModel.currentUser.collectAsState()
 
     if (ActivityCompat.checkSelfPermission(
             LocalContext.current,
@@ -112,13 +148,39 @@ fun HomeScreen(
     var showDriverInfoDialog by remember { mutableStateOf(false) }
     var selectedDriver: Driver? = null
 
+    var showPassengerInfoDialog by remember { mutableStateOf(false) }
+    var selectedPassenger: Passenger? = null
+
+    var showUsersDialog by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit)
+    {
+        val usersListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                // snapshot value may be null
+                if (snapshot.value != null) {
+                    Log.i(LOG_TAG, "DisposableEffect, filtering")
+
+                    viewModel.loadFilteredUsers(SearchFilters(query, radius, seats, rating))
+                }
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Log.w(LOG_TAG, "usersListener:onCancelled", error.toException())
+            }
+        }
+        viewModel.userRepo.users.addValueEventListener(usersListener)
+
+        onDispose {
+            Log.i(LOG_TAG, "onDispose")
+            viewModel.userRepo.users.removeEventListener(usersListener)
+        }
+    }
+
     LocationUpdates(onLocationUpdate = {
-        Log.i(LOG_TAG, it.toString())
         currentLocation = it.lastLocation
         viewModel.updateUserLocation(it)
     })
-
-
 
     Scaffold(content = { padding ->
         Box(
@@ -128,25 +190,43 @@ fun HomeScreen(
             contentAlignment = Alignment.TopCenter
         ) {
             BottomSheetScaffold(
+                sheetBackgroundColor = MaterialTheme.colorScheme.background,
                 sheetContent = {
-                    if (viewModel.currentUser?.userType == UserType.Passenger) {
+                    if (currentUser?.userType == UserType.Passenger) {
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.padding(8.dp)
                         ) {
-                            var query by rememberSaveable { mutableStateOf("") }
                             var active by rememberSaveable { mutableStateOf(false) }
 
                             Icon(
-                                Icons.Outlined.SwipeUpAlt,
+                                imageVector = when (bottomSheetScaffoldState.bottomSheetState.isExpanded) {
+                                    true -> Icons.Outlined.ExpandMore
+                                    false -> Icons.Outlined.ExpandLess
+                                },
                                 contentDescription = null
                             )
-
-
+                            Row {
+                                Icon(
+                                    Icons.Outlined.FilterAlt,
+                                    contentDescription = null
+                                )
+                                SmallSpacer()
+                                Text("Filters")
+                            }
+                            SmallSpacer()
                             DockedSearchBar(
                                 active = active,
                                 onActiveChange = { active = it },
-                                onQueryChange = { query = it },
+                                onQueryChange = {
+                                    query = it
+
+                                    viewModel.loadFilteredUsers(
+                                        SearchFilters(
+                                            query, radius, seats, rating
+                                        )
+                                    )
+                                },
                                 onSearch = { active = false },
                                 query = query,
                                 placeholder = { Text("Search") },
@@ -156,94 +236,90 @@ fun HomeScreen(
                                         contentDescription = null
                                     )
                                 },
-                            ) {}
-
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
                             ) {
-                                val radiusRange = 0F..1000F
-                                val radius =
-                                    remember { mutableIntStateOf(radiusRange.endInclusive.toInt()) }
-                                SmallSpacer()
-                                Text("Radius")
-                                SmallSpacer()
-                                Row(
+                                LazyColumn(
                                     modifier = Modifier
-                                        .fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
+                                        .fillMaxSize()
+                                        .padding(padding)
                                 ) {
-                                    Text(text = "${radiusRange.start.toInt()} m")
-                                    Text(text = "${radiusRange.endInclusive.toInt()} m")
+                                    items(usersOnMap) { user ->
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.padding(8.dp)
+                                        ) {
+                                            UserListItem(user, user.name + " " + user.lastName, "${user.score} points")
+                                        }
+                                    }
                                 }
-
-                                Slider(
-                                    value = radius.value.toFloat(),
-                                    onValueChange = { newValue ->
-                                        radius.value = newValue.toInt()
-                                    },
-                                    valueRange = radiusRange,
-                                    steps = 20,
-                                )
-                                Text(text = "${radius.intValue} m")
-
-                                val seats = remember { mutableIntStateOf(5) }
-                                SmallSpacer()
-                                Text("Number of seats")
-                                SmallSpacer()
-
-                                Slider(
-                                    value = seats.value.toFloat(),
-                                    onValueChange = { newValue ->
-                                        seats.value = newValue.toInt()
-                                    },
-                                    valueRange = 1F..5F,
-                                    steps = 5,
-                                )
-                                Text(text = "${seats.intValue} seats")
-
-                                val rating = remember { mutableIntStateOf(4) }
-                                SmallSpacer()
-                                Text("Driver rating")
-                                SmallSpacer()
-
-                                Slider(
-                                    value = rating.value.toFloat(),
-                                    onValueChange = { newValue ->
-                                        rating.value = newValue.toInt()
-                                    },
-                                    valueRange = 1F..5F,
-                                    steps = 5,
-                                )
-                                Text(text = "${rating.intValue} stars")
-
-                                SmallSpacer()
-                                Button(onClick = {
-                                    viewModel.loadFilteredUsers(
-                                        SearchFilters(
-                                            query,
-                                            radius.value,
-                                            seats.value,
-                                            rating.value
-                                        )
-                                    )
-                                }) {
-                                    Icon(
-                                        Icons.Outlined.FilterAlt,
-                                        contentDescription = null
-                                    )
-                                    SmallSpacer()
-                                    Text("Filter")
-                                }
-                                SmallSpacer()
-
-                                Icon(
-                                    Icons.Outlined.SwipeDownAlt,
-                                    contentDescription = null
-                                )
+                            }
+                            SmallSpacer()
+                            Text("Radius")
+                            SmallSpacer()
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(text = "${radiusRange.start.toInt()} m")
+                                Text(text = "${radiusRange.endInclusive.toInt()} m")
                             }
 
-                        }
+                            Slider(
+                                value = radius.toFloat(),
+                                onValueChange = { newValue ->
+                                    radius = newValue.toInt()
 
+                                    viewModel.loadFilteredUsers(
+                                        SearchFilters(
+                                            query, radius, seats, rating
+                                        )
+                                    )
+                                },
+                                valueRange = radiusRange,
+                                steps = 20,
+                            )
+                            Text(text = "$radius m")
+
+                            SmallSpacer()
+                            Text("Number of seats")
+                            SmallSpacer()
+
+                            Slider(
+                                value = seats.toFloat(),
+                                onValueChange = { newValue ->
+                                    seats = newValue.toInt()
+
+                                    viewModel.loadFilteredUsers(
+                                        SearchFilters(
+                                            query, radius, seats, rating
+                                        )
+                                    )
+                                },
+                                valueRange = 1F..5F,
+                                steps = 5,
+                            )
+                            Text(text = "$seats seats")
+
+                            SmallSpacer()
+                            Text("Driver rating")
+                            SmallSpacer()
+
+                            Slider(
+                                value = rating.toFloat(),
+                                onValueChange = { newValue ->
+                                    rating = newValue.toInt()
+
+                                    viewModel.loadFilteredUsers(
+                                        SearchFilters(
+                                            query, radius, seats, rating
+                                        )
+                                    )
+                                },
+                                valueRange = 1F..5F,
+                                steps = 5,
+                            )
+                            Text(text = "$rating stars")
+                        }
                     }
                 },
                 scaffoldState = bottomSheetScaffoldState
@@ -268,8 +344,8 @@ fun HomeScreen(
                         MapEffect {
                             it.setOnCameraIdleListener {
                                 scope.launch {
-                                    if (viewModel.currentUser?.userType == UserType.Driver
-                                        && (viewModel.currentUser as Driver).drive.active && currentLocation != null
+                                    if (currentUser?.userType == UserType.Driver
+                                        && (currentUser as Driver).drive.active && currentLocation != null
                                     ) {
                                         cameraPositionState.animate(
                                             update = CameraUpdateFactory.newLatLngZoom(
@@ -285,43 +361,100 @@ fun HomeScreen(
                                 }
                             }
                         }
+
                         if (currentLocation != null) {
                             Circle(
                                 center = LatLng(
                                     currentLocation!!.latitude,
                                     currentLocation!!.longitude
                                 ),
-                                fillColor = Color.Blue.copy(alpha = 0.67f),
-                                visible = true
+                                strokeWidth = 0.0f,
+                                fillColor = Color.Blue.copy(alpha = 0.1f),
+                                visible = true,
+                                radius = radius.toDouble()
                             )
                         }
 
-                        viewModel.usersOnMap.forEach { user ->
-                            if (viewModel.currentUser?.id != user.id) {
+                        usersOnMap.forEach { user ->
+                            if (currentUser?.id != user.id) {
+//                                UserMarker(
+//                                    icon = when (user.userType) {
+//                                        UserType.Passenger -> bitmapDescriptorFromVector(
+//                                            context,
+//                                            R.drawable.baseline_person_pin_circle_36
+//                                        )
+//
+//                                        UserType.Driver -> bitmapDescriptorFromVector(
+//                                            context,
+//                                            R.drawable.baseline_directions_car_36
+//                                        )
+//                                    },
+//                                    position = LatLng(user.latitude, user.longitude),
+//                                    onClick = {
+//                                        when (user.userType) {
+//                                            UserType.Passenger -> {
+//                                                selectedPassenger = user as Passenger
+//                                                showPassengerInfoDialog = true
+//                                                Log.i(LOG_TAG, selectedPassenger.toString())
+//                                                Log.i(
+//                                                    LOG_TAG,
+//                                                    showPassengerInfoDialog.toString()
+//                                                )
+//                                            }
+//
+//                                            UserType.Driver -> {
+//                                                selectedDriver = user as Driver
+//                                                showDriverInfoDialog = true
+//                                                Log.i(LOG_TAG, selectedDriver.toString())
+//                                                Log.i(LOG_TAG, showDriverInfoDialog.toString())
+//                                            }
+//                                        }
+//
+//                                        true
+//                                    },
+//                                    title = "${user.name} ${user.lastName}",
+//                                    id=user.id
+//                                )
                                 Marker(
-                                    MarkerState(LatLng(user.latitude, user.longitude)),
+                                    state = MarkerState( LatLng(user.latitude, user.longitude)),
+                                    icon = when (user.userType) {
+                                        UserType.Passenger -> bitmapDescriptorFromVector(
+                                            context,
+                                            R.drawable.baseline_person_pin_circle_36
+                                        )
+
+                                        UserType.Driver -> bitmapDescriptorFromVector(
+                                            context,
+                                            R.drawable.baseline_directions_car_36
+                                        )
+                                    },
                                     onClick = {
-                                        if (user.userType == UserType.Driver) {
-                                            selectedDriver = user as Driver
-                                            showDriverInfoDialog = true
-                                            Log.i(LOG_TAG, "hi")
-                                            Log.i(LOG_TAG, selectedDriver.toString())
-                                            Log.i(LOG_TAG, showDriverInfoDialog.toString())
+                                        when (user.userType) {
+                                            UserType.Passenger -> {
+                                                selectedPassenger = user as Passenger
+                                                showPassengerInfoDialog = true
+                                                Log.i(LOG_TAG, selectedPassenger.toString())
+                                                Log.i(
+                                                    LOG_TAG,
+                                                    showPassengerInfoDialog.toString()
+                                                )
+                                            }
+
+                                            UserType.Driver -> {
+                                                selectedDriver = user as Driver
+                                                showDriverInfoDialog = true
+                                                Log.i(LOG_TAG, selectedDriver.toString())
+                                                Log.i(LOG_TAG, showDriverInfoDialog.toString())
+                                            }
                                         }
 
                                         true
                                     },
-                                    title = when (user.userType) {
-                                        UserType.Passenger -> "Passenger ${user.name} ${user.lastName}"
-                                        UserType.Driver -> "Driver ${user.name} ${user.lastName}\n" +
-                                                "Score: ${user.score}\n" +
-                                                "Car: ${(user as Driver).car.brand} ${user.car.model} (${user.car.seats} seater)"
-                                    }
+                                    title = "${user.name} ${user.lastName}"
                                 )
                             }
                         }
                     }
-
 
                     Box(
                         modifier = Modifier
@@ -347,93 +480,115 @@ fun HomeScreen(
                             },
                             shape = CircleShape,
                             modifier = Modifier
-                                .size(48.dp)
+                                .size(56.dp)
                                 .align(Alignment.BottomEnd),
                             content = {
                                 Icon(
-                                    modifier = Modifier.size(25.dp),
+                                    modifier = Modifier.size(24.dp),
                                     imageVector = Icons.Sharp.MyLocation,
-                                    contentDescription = "Location",
-                                    tint = Color.DarkGray
+                                    contentDescription = "Location"
+                                )
+                            }
+                        )
+
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(bottom = 92.dp, start = 32.dp)
+                    ) {
+                        SmallFloatingActionButton(
+                            onClick = {
+                                showUsersDialog = true
+                            },
+                            shape = CircleShape,
+                            modifier = Modifier
+                                .size(56.dp)
+                                .align(Alignment.BottomStart),
+                            content = {
+                                Icon(
+                                    modifier = Modifier.size(24.dp),
+                                    imageVector = Icons.Outlined.People,
+                                    contentDescription = "Location"
                                 )
                             }
                         )
                     }
 
 
-                    if (showDriverInfoDialog) {
-                        Dialog(onDismissRequest = { showDriverInfoDialog = false }) {
-                            Surface(
-                                modifier = Modifier.align(Alignment.Center),
-                                onClick = { showDriverInfoDialog = false },
-                                shape = RectangleShape,
-                                color = MaterialTheme.colorScheme.background,
-                                border = BorderStroke(Dp.Hairline, Color.Black),
-                            ) {
-                                UserListItem(
-                                    photoUrl = selectedDriver!!.imageUrl,
-                                    title = "Driver ${selectedDriver!!.name} ${selectedDriver!!.lastName}\n" +
-                                            "Score: ${selectedDriver!!.score}\n" +
-                                            "Car: ${selectedDriver!!.car.brand} ${selectedDriver!!.car.model} (${selectedDriver!!.car.seats} seater)",
-                                    subtitle = "Subtitle"
-                                )
-
-//                                Box(
-//                                    Modifier
-//                                        .padding(16.dp)
-//                                        .background(MaterialTheme.colorScheme.background)
-//                                        .align(Alignment.Center)
-//                                ) {
-//                                    if (selectedDriver != null) {
-//                                        Column {
-//                                            Text(
-//                                                "Driver ${selectedDriver!!.name} ${selectedDriver!!.lastName}\n" +
-//                                                        "Score: ${selectedDriver!!.score}\n" +
-//                                                        "Car: ${selectedDriver!!.car.brand} ${selectedDriver!!.car.model} (${selectedDriver!!.car.seats} seater)"
-//                                            )
-                                SmallSpacer()
-                                Button(onClick = {
-                                    viewModel.addPassengerToDrive(
-                                        selectedDriver!!
-                                    )
-                                }) {
-                                    Text("Request a drive")
-                                }
-//                                        }
-//                                    }
-//                                }
-                            }
-                        }
+                    if (showUsersDialog) {
+                        UsersDialog(
+                            users = usersOnMap,
+                            onDismissRequest = { showUsersDialog = false })
                     }
+
+                    if (showRatingDialogState && drivenByState != null && currentUser!!.userType == UserType.Passenger) {
+                        RatingDialog(driver = drivenByState!!,
+                            onClick = { stars ->
+                                viewModel.rateDriver(stars, drivenByState!!)
+                                showRatingDialog.update { false }
+                                drivenBy.update { null }
+                            },
+                            onDismissRequest = { showRatingDialog.update { false } })
+                    }
+
+                    if (showDriverInfoDialog && selectedDriver != null) {
+                        DriverDialog(
+                            selectedDriver!!,
+                            {
+                                if (selectedDriver!!.car.seats == 0) {
+                                    showToast(
+                                        context,
+                                        "No more free seats in this driver's car."
+                                    )
+                                } else if (selectedDriver!!.drive.passengers.contains(
+                                        currentUser!!.id
+                                    )
+                                ) {
+                                    showToast(
+                                        context,
+                                        "Already a part of this drive."
+                                    )
+                                } else {
+                                    showToast(context, "Drive requested")
+                                    viewModel.addPassengerToDrive(selectedDriver!!)
+                                }
+
+                                showDriverInfoDialog = false
+                            },
+                            { showDriverInfoDialog = false })
+                    }
+                    if (showPassengerInfoDialog && selectedPassenger != null) {
+                        PassengerDialog(
+                            selectedPassenger!!,
+                            { showPassengerInfoDialog = false }
+                        )
+                    }
+
                 }
             }
         }
     },
         floatingActionButton = {
-            if (viewModel.currentUser?.userType == UserType.Driver) {
-                ExtendedFloatingActionButton(
-                    text = {
-                        when ((viewModel.currentUser as Driver).drive.active) {
-                            true -> Text("End drive")
-                            false -> Text("Start drive")
-                        }
-                    },
-                    icon = {
-                        Icon(
-                            modifier = Modifier.size(32.dp),
-                            imageVector = Icons.Outlined.DirectionsCar,
-                            contentDescription = "Drive toggle",
-                        )
-                    },
-                    onClick = {
-                        when ((viewModel.currentUser as Driver).drive.active) {
-                            true -> viewModel.endDrive()
-                            false -> viewModel.startDrive()
-                        }
-                    },
-                    expanded = true,
-                )
-            }
+            DriveFAB(currentUser, context, { viewModel.startDrive() }, { viewModel.endDrive() })
         }
     )
+}
+
+fun bitmapDescriptorFromVector(
+    context: Context,
+    vectorResId: Int
+): BitmapDescriptor? {
+
+    val drawable = ContextCompat.getDrawable(context, vectorResId) ?: return null
+    drawable.setBounds(0, 0, drawable.intrinsicWidth, drawable.intrinsicHeight)
+    val bm = Bitmap.createBitmap(
+        drawable.intrinsicWidth,
+        drawable.intrinsicHeight,
+        Bitmap.Config.ARGB_8888
+    )
+
+    val canvas = android.graphics.Canvas(bm)
+    drawable.draw(canvas)
+    return BitmapDescriptorFactory.fromBitmap(bm)
 }
