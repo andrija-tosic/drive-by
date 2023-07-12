@@ -178,7 +178,27 @@ class HomeViewModel @Inject constructor(
             }.toMutableList()
 
             UserType.Driver -> usersToFilter.filter {
-                it.userType == UserType.Passenger
+                val meetsDistance = distance(
+                    currentUser.latitude,
+                    currentUser.longitude,
+                    it.latitude,
+                    it.longitude
+                ).toInt() <= searchFilters.radius
+
+                val meetsQuery = when (searchFilters.query.isNotBlank()) {
+                    true -> when (it.userType) {
+                        UserType.Passenger -> (it.name.contains(
+                            searchFilters.query,
+                            ignoreCase = true
+                        ) || it.lastName.contains(searchFilters.query, ignoreCase = true))
+
+                        UserType.Driver -> false
+                    }
+
+                    false -> true
+                }
+
+                it.userType == UserType.Passenger && meetsDistance && meetsQuery
             }.toMutableList()
         }
     }

@@ -2,6 +2,7 @@ package com.example.driveby.presentation.home.components
 
 import android.content.Context
 import android.util.Log
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.DirectionsCar
@@ -26,6 +27,7 @@ fun DriveFAB(
 ) {
     if (currentUser?.userType == UserType.Driver) {
         ExtendedFloatingActionButton(
+            modifier =  Modifier.padding(bottom = 76.dp, end = 92.dp),
             text = {
                 when ((currentUser as Driver).drive.active) {
                     true -> Text("End drive")

@@ -1,9 +1,7 @@
 package com.example.driveby.presentation.home
 
 import android.Manifest
-import android.content.Context
-import android.content.pm.PackageManager
-import android.graphics.Bitmap
+import android.annotation.SuppressLint
 import android.location.Location
 import android.util.Log
 import androidx.compose.foundation.layout.Arrangement
@@ -39,6 +37,7 @@ import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -52,14 +51,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.driveby.R
 import com.example.driveby.components.LocationUpdates
 import com.example.driveby.components.SmallSpacer
 import com.example.driveby.components.UserListItem
 import com.example.driveby.core.Strings.LOG_TAG
+import com.example.driveby.core.Utils.Companion.bitmapDescriptorFromVector
 import com.example.driveby.core.Utils.Companion.showToast
 import com.example.driveby.domain.model.Driver
 import com.example.driveby.domain.model.Passenger
@@ -70,12 +68,11 @@ import com.example.driveby.presentation.home.components.DriverDialog
 import com.example.driveby.presentation.home.components.PassengerDialog
 import com.example.driveby.presentation.home.components.RatingDialog
 import com.example.driveby.presentation.home.components.UsersDialog
+import com.google.accompanist.permissions.ExperimentalPermissionsApi
+import com.google.accompanist.permissions.rememberMultiplePermissionsState
 import com.google.android.gms.maps.CameraUpdateFactory
-import com.google.android.gms.maps.model.BitmapDescriptor
-import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.Marker
 import com.google.firebase.database.DataSnapshot
 import com.google.firebase.database.DatabaseError
 import com.google.firebase.database.ValueEventListener
@@ -88,13 +85,13 @@ import com.google.maps.android.compose.MapsComposeExperimentalApi
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
-import com.google.maps.android.compose.rememberMarkerState
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+@SuppressLint("MissingPermission")
 @OptIn(
     ExperimentalMaterialApi::class, ExperimentalMaterial3Api::class,
-    MapsComposeExperimentalApi::class
+    MapsComposeExperimentalApi::class, ExperimentalPermissionsApi::class
 )
 @Composable
 fun HomeScreen(
@@ -133,17 +130,26 @@ fun HomeScreen(
     val usersOnMap by viewModel.usersOnMap.collectAsState()
     val currentUser by viewModel.currentUser.collectAsState()
 
-    if (ActivityCompat.checkSelfPermission(
-            LocalContext.current,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        ) != PackageManager.PERMISSION_GRANTED
-        && ActivityCompat.checkSelfPermission(
-            LocalContext.current,
+    val locationPermissionState = rememberMultiplePermissionsState(
+        permissions = listOf(
+            Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION
-        ) != PackageManager.PERMISSION_GRANTED
+        )
     ) {
-        return
+//        viewModel.startLocationUpdates()
     }
+
+    if (locationPermissionState.allPermissionsGranted) {
+        LocationUpdates(onLocationUpdate = {
+            currentLocation = it.lastLocation
+            viewModel.updateUserLocation(it)
+        })
+    }
+
+    LaunchedEffect(Unit) {
+        locationPermissionState.launchMultiplePermissionRequest()
+    }
+
 
     var showDriverInfoDialog by remember { mutableStateOf(false) }
     var selectedDriver: Driver? = null
@@ -177,11 +183,6 @@ fun HomeScreen(
         }
     }
 
-    LocationUpdates(onLocationUpdate = {
-        currentLocation = it.lastLocation
-        viewModel.updateUserLocation(it)
-    })
-
     Scaffold(content = { padding ->
         Box(
             modifier = Modifier
@@ -192,93 +193,99 @@ fun HomeScreen(
             BottomSheetScaffold(
                 sheetBackgroundColor = MaterialTheme.colorScheme.background,
                 sheetContent = {
-                    if (currentUser?.userType == UserType.Passenger) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.padding(8.dp)
-                        ) {
-                            var active by rememberSaveable { mutableStateOf(false) }
+//                    if (currentUser?.userType == UserType.Passenger) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(8.dp)
+                    ) {
+                        var active by rememberSaveable { mutableStateOf(false) }
 
+                        Icon(
+                            imageVector = when (bottomSheetScaffoldState.bottomSheetState.isExpanded) {
+                                true -> Icons.Outlined.ExpandMore
+                                false -> Icons.Outlined.ExpandLess
+                            },
+                            contentDescription = null
+                        )
+                        Row {
                             Icon(
-                                imageVector = when (bottomSheetScaffoldState.bottomSheetState.isExpanded) {
-                                    true -> Icons.Outlined.ExpandMore
-                                    false -> Icons.Outlined.ExpandLess
-                                },
+                                Icons.Outlined.FilterAlt,
                                 contentDescription = null
                             )
-                            Row {
+                            SmallSpacer()
+                            Text("Filters")
+                        }
+                        SmallSpacer()
+                        DockedSearchBar(
+                            active = active,
+                            onActiveChange = { active = it },
+                            onQueryChange = {
+                                query = it
+
+                                viewModel.loadFilteredUsers(
+                                    SearchFilters(
+                                        query, radius, seats, rating
+                                    )
+                                )
+                            },
+                            onSearch = { active = false },
+                            query = query,
+                            placeholder = { Text("Search") },
+                            leadingIcon = {
                                 Icon(
-                                    Icons.Outlined.FilterAlt,
+                                    Icons.Rounded.Search,
                                     contentDescription = null
                                 )
-                                SmallSpacer()
-                                Text("Filters")
-                            }
-                            SmallSpacer()
-                            DockedSearchBar(
-                                active = active,
-                                onActiveChange = { active = it },
-                                onQueryChange = {
-                                    query = it
-
-                                    viewModel.loadFilteredUsers(
-                                        SearchFilters(
-                                            query, radius, seats, rating
-                                        )
-                                    )
-                                },
-                                onSearch = { active = false },
-                                query = query,
-                                placeholder = { Text("Search") },
-                                leadingIcon = {
-                                    Icon(
-                                        Icons.Rounded.Search,
-                                        contentDescription = null
-                                    )
-                                },
+                            },
+                        ) {
+                            LazyColumn(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(padding)
                             ) {
-                                LazyColumn(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(padding)
-                                ) {
-                                    items(usersOnMap) { user ->
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            modifier = Modifier.padding(8.dp)
-                                        ) {
-                                            UserListItem(user, user.name + " " + user.lastName, "${user.score} points")
-                                        }
+                                items(usersOnMap.take(3)) { user ->
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.padding(8.dp)
+                                    ) {
+                                        UserListItem(
+                                            user,
+                                            user.name + " " + user.lastName,
+                                            "${user.score} points"
+                                        )
                                     }
                                 }
                             }
-                            SmallSpacer()
-                            Text("Radius")
-                            SmallSpacer()
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Text(text = "${radiusRange.start.toInt()} m")
-                                Text(text = "${radiusRange.endInclusive.toInt()} m")
-                            }
+                        }
+                        SmallSpacer()
+                        Text("Radius")
+                        SmallSpacer()
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(text = "${radiusRange.start.toInt()} m")
+                            Text(text = "${radiusRange.endInclusive.toInt()} m")
+                        }
 
-                            Slider(
-                                value = radius.toFloat(),
-                                onValueChange = { newValue ->
-                                    radius = newValue.toInt()
+                        Slider(
+                            value = radius.toFloat(),
+                            onValueChange = { newValue ->
+                                radius = newValue.toInt()
 
-                                    viewModel.loadFilteredUsers(
-                                        SearchFilters(
-                                            query, radius, seats, rating
-                                        )
+                                viewModel.loadFilteredUsers(
+                                    SearchFilters(
+                                        query, radius, seats, rating
                                     )
-                                },
-                                valueRange = radiusRange,
-                                steps = 20,
-                            )
-                            Text(text = "$radius m")
+                                )
+                            },
+                            valueRange = radiusRange,
+                            steps = 20,
+                        )
+                        Text(text = "$radius m")
+
+                        if (currentUser?.userType == UserType.Passenger) {
 
                             SmallSpacer()
                             Text("Number of seats")
@@ -321,6 +328,7 @@ fun HomeScreen(
                             Text(text = "$rating stars")
                         }
                     }
+//                    }
                 },
                 scaffoldState = bottomSheetScaffoldState
             ) {
@@ -329,129 +337,102 @@ fun HomeScreen(
                         .fillMaxSize()
                         .padding(bottom = 0.dp)
                 ) {
-                    GoogleMap(
-                        modifier = Modifier.fillMaxSize(),
-                        cameraPositionState = cameraPositionState,
-                        uiSettings = MapUiSettings(
-                            mapToolbarEnabled = true,
-                            zoomControlsEnabled = false,
-                            myLocationButtonEnabled = false
-                        ),
-                        properties = MapProperties(
-                            isMyLocationEnabled = true
-                        )
-                    ) {
-                        MapEffect {
-                            it.setOnCameraIdleListener {
-                                scope.launch {
-                                    if (currentUser?.userType == UserType.Driver
-                                        && (currentUser as Driver).drive.active && currentLocation != null
-                                    ) {
-                                        cameraPositionState.animate(
-                                            update = CameraUpdateFactory.newLatLngZoom(
-                                                LatLng(
-                                                    currentLocation!!.latitude,
-                                                    currentLocation!!.longitude
+                    if (locationPermissionState.allPermissionsGranted) {
+
+                        GoogleMap(
+                            modifier = Modifier.fillMaxSize(),
+                            cameraPositionState = cameraPositionState,
+                            uiSettings = MapUiSettings(
+                                mapToolbarEnabled = true,
+                                zoomControlsEnabled = false,
+                                myLocationButtonEnabled = false
+                            ),
+                            properties = MapProperties(
+                                isMyLocationEnabled = true
+                            )
+                        ) {
+                            MapEffect {
+                                it.setOnCameraIdleListener {
+                                    scope.launch {
+                                        if (currentUser?.userType == UserType.Driver
+                                            && (currentUser as Driver).drive.active && currentLocation != null
+                                        ) {
+                                            cameraPositionState.animate(
+                                                update = CameraUpdateFactory.newLatLngZoom(
+                                                    LatLng(
+                                                        currentLocation!!.latitude,
+                                                        currentLocation!!.longitude
+                                                    ),
+                                                    16f
                                                 ),
-                                                16f
-                                            ),
-                                            durationMs = 667
-                                        )
+                                                durationMs = 667
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        }
 
-                        if (currentLocation != null) {
-                            Circle(
-                                center = LatLng(
-                                    currentLocation!!.latitude,
-                                    currentLocation!!.longitude
-                                ),
-                                strokeWidth = 0.0f,
-                                fillColor = Color.Blue.copy(alpha = 0.1f),
-                                visible = true,
-                                radius = radius.toDouble()
-                            )
-                        }
-
-                        usersOnMap.forEach { user ->
-                            if (currentUser?.id != user.id) {
-//                                UserMarker(
-//                                    icon = when (user.userType) {
-//                                        UserType.Passenger -> bitmapDescriptorFromVector(
-//                                            context,
-//                                            R.drawable.baseline_person_pin_circle_36
-//                                        )
-//
-//                                        UserType.Driver -> bitmapDescriptorFromVector(
-//                                            context,
-//                                            R.drawable.baseline_directions_car_36
-//                                        )
-//                                    },
-//                                    position = LatLng(user.latitude, user.longitude),
-//                                    onClick = {
-//                                        when (user.userType) {
-//                                            UserType.Passenger -> {
-//                                                selectedPassenger = user as Passenger
-//                                                showPassengerInfoDialog = true
-//                                                Log.i(LOG_TAG, selectedPassenger.toString())
-//                                                Log.i(
-//                                                    LOG_TAG,
-//                                                    showPassengerInfoDialog.toString()
-//                                                )
-//                                            }
-//
-//                                            UserType.Driver -> {
-//                                                selectedDriver = user as Driver
-//                                                showDriverInfoDialog = true
-//                                                Log.i(LOG_TAG, selectedDriver.toString())
-//                                                Log.i(LOG_TAG, showDriverInfoDialog.toString())
-//                                            }
-//                                        }
-//
-//                                        true
-//                                    },
-//                                    title = "${user.name} ${user.lastName}",
-//                                    id=user.id
-//                                )
-                                Marker(
-                                    state = MarkerState( LatLng(user.latitude, user.longitude)),
-                                    icon = when (user.userType) {
-                                        UserType.Passenger -> bitmapDescriptorFromVector(
-                                            context,
-                                            R.drawable.baseline_person_pin_circle_36
-                                        )
-
-                                        UserType.Driver -> bitmapDescriptorFromVector(
-                                            context,
-                                            R.drawable.baseline_directions_car_36
-                                        )
-                                    },
-                                    onClick = {
-                                        when (user.userType) {
-                                            UserType.Passenger -> {
-                                                selectedPassenger = user as Passenger
-                                                showPassengerInfoDialog = true
-                                                Log.i(LOG_TAG, selectedPassenger.toString())
-                                                Log.i(
-                                                    LOG_TAG,
-                                                    showPassengerInfoDialog.toString()
-                                                )
-                                            }
-
-                                            UserType.Driver -> {
-                                                selectedDriver = user as Driver
-                                                showDriverInfoDialog = true
-                                                Log.i(LOG_TAG, selectedDriver.toString())
-                                                Log.i(LOG_TAG, showDriverInfoDialog.toString())
-                                            }
-                                        }
-
-                                        true
-                                    },
-                                    title = "${user.name} ${user.lastName}"
+                            if (currentLocation != null) {
+                                Circle(
+                                    center = LatLng(
+                                        currentLocation!!.latitude,
+                                        currentLocation!!.longitude
+                                    ),
+                                    strokeWidth = 0.0f,
+                                    fillColor = Color.Blue.copy(alpha = 0.1f),
+                                    visible = true,
+                                    radius = radius.toDouble()
                                 )
+                            }
+
+                            usersOnMap.forEach { user ->
+                                if (currentUser?.id != user.id) {
+                                    Marker(
+                                        state = MarkerState(
+                                            LatLng(
+                                                user.latitude,
+                                                user.longitude
+                                            )
+                                        ),
+                                        icon = when (user.userType) {
+                                            UserType.Passenger -> bitmapDescriptorFromVector(
+                                                context,
+                                                R.drawable.baseline_person_pin_circle_36
+                                            )
+
+                                            UserType.Driver -> bitmapDescriptorFromVector(
+                                                context,
+                                                R.drawable.baseline_directions_car_36
+                                            )
+                                        },
+                                        onClick = {
+                                            when (user.userType) {
+                                                UserType.Passenger -> {
+                                                    selectedPassenger = user as Passenger
+                                                    showPassengerInfoDialog = true
+                                                    Log.i(LOG_TAG, selectedPassenger.toString())
+                                                    Log.i(
+                                                        LOG_TAG,
+                                                        showPassengerInfoDialog.toString()
+                                                    )
+                                                }
+
+                                                UserType.Driver -> {
+                                                    selectedDriver = user as Driver
+                                                    showDriverInfoDialog = true
+                                                    Log.i(LOG_TAG, selectedDriver.toString())
+                                                    Log.i(
+                                                        LOG_TAG,
+                                                        showDriverInfoDialog.toString()
+                                                    )
+                                                }
+                                            }
+
+                                            true
+                                        },
+                                        title = "${user.name} ${user.lastName}"
+                                    )
+                                }
                             }
                         }
                     }
@@ -515,6 +496,18 @@ fun HomeScreen(
                         )
                     }
 
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+//                            .padding(bottom = 76.dp, end = 92.dp)
+                    ) {
+                        DriveFAB(
+                            currentUser,
+                            context,
+                            { viewModel.startDrive() },
+                            { viewModel.endDrive() })
+                    }
+
 
                     if (showUsersDialog) {
                         UsersDialog(
@@ -569,26 +562,9 @@ fun HomeScreen(
             }
         }
     },
-        floatingActionButton = {
-            DriveFAB(currentUser, context, { viewModel.startDrive() }, { viewModel.endDrive() })
-        }
+//        floatingActionButton = {
+//            DriveFAB(currentUser, context, { viewModel.startDrive() }, { viewModel.endDrive() })
+//        }
     )
 }
 
-fun bitmapDescriptorFromVector(
-    context: Context,
-    vectorResId: Int
-): BitmapDescriptor? {
-
-    val drawable = ContextCompat.getDrawable(context, vectorResId) ?: return null
-    drawable.setBounds(0, 0, drawable.intrinsicWidth, drawable.intrinsicHeight)
-    val bm = Bitmap.createBitmap(
-        drawable.intrinsicWidth,
-        drawable.intrinsicHeight,
-        Bitmap.Config.ARGB_8888
-    )
-
-    val canvas = android.graphics.Canvas(bm)
-    drawable.draw(canvas)
-    return BitmapDescriptorFactory.fromBitmap(bm)
-}
